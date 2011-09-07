@@ -77,7 +77,8 @@ tyThingToLHsDecl t = noLoc $ case t of
 -- class associated-types are a subset of TyCon
 -- (mainly only type/data-families)
 synifyClassAT :: ClassATItem -> (LTyClDecl Name, [LTyClDecl Name])
-synifyClassAT (tc, mb_defs) = (noLoc (synifyTyCon tc), maybe [] (map synifyATDefault) mb_defs)
+synifyClassAT (tc, _mb_defs) = (noLoc (synifyTyCon tc), [])
+  -- ignore the mb_defs since we ignore default methods
 
 synifyATDefault :: TyCon -> LTyClDecl Name
 synifyATDefault tc = noLoc (synifyAxiom ax)
