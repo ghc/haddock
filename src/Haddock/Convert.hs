@@ -166,11 +166,7 @@ synifyTyCon tc
   alg_deriv = Nothing
   syn_type = synifyType WithinType (synTyConType tc)
  in if isSynTyCon tc
-<<<<<<< HEAD
-  then TySynonym name Nothing tyvars typats syn_type placeHolderNames
-=======
-  then TySynonym name tyvars typats syn_type
->>>>>>> master
+  then TySynonym name tyvars typats syn_type placeHolderNames
   else TyData alg_nd alg_ctx name Nothing tyvars typats (fmap synifyKind alg_kindSig) alg_cons alg_deriv
 
 
