@@ -302,7 +302,7 @@ withGhc libDir flags ghcActs = saveStaticFlagGlobals >>= \savedFlags -> do
   (restFlags, _) <- parseStaticFlags (map noLoc flags)
   runGhc (Just libDir) $ do
     dynflags  <- getSessionDynFlags
-    let dynflags' = dopt_set dynflags Opt_Haddock
+    let dynflags' = gopt_set dynflags Opt_Haddock
     let dynflags'' = dynflags' {
         hscTarget = HscNothing,
         ghcMode   = CompManager,
@@ -317,7 +317,7 @@ withGhc libDir flags ghcActs = saveStaticFlagGlobals >>= \savedFlags -> do
         ghcActs dynflags'''
   `finally` restoreStaticFlagGlobals savedFlags
   where
-    parseGhcFlags :: Monad m => DynFlags -> [Located String]
+    parseGhcFlags :: MonadIO m => DynFlags -> [Located String]
                   -> [String] -> m DynFlags
     parseGhcFlags dynflags flags_ origFlags = do
       -- TODO: handle warnings?

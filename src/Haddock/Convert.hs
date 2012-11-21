@@ -151,8 +151,8 @@ synifyTyCon tc
   | otherwise =
   -- (closed) newtype and data
   let
-  nd = if isNewTyCon tc then NewType else DataType
-  ctx = synifyCtx (tyConStupidTheta tc)
+  alg_nd = if isNewTyCon tc then NewType else DataType
+  alg_ctx = synifyCtx (tyConStupidTheta tc)
   name = synifyName tc
   tyvars = synifyTyVars (tyConTyVars tc)
   kindSig = Just (tyConKind tc)
@@ -175,13 +175,16 @@ synifyTyCon tc
   use_gadt_syntax = any (not . isVanillaDataCon) (tyConDataCons tc)
   cons = map (synifyDataCon use_gadt_syntax) (tyConDataCons tc)
   -- "deriving" doesn't affect the signature, no need to specify any.
-  deriv = Nothing
-  defn = HsDataDefn { dd_ND      = nd
-                    , dd_ctxt    = ctx
+  alg_deriv = Nothing
+  defn | Just (_, syn_rhs) <- synTyConDefn_maybe tc 
+       = TySynonym (synifyType WithinType syn_rhs)
+       | otherwise
+       = HsDataDefn { dd_ND      = alg_nd
+                    , dd_ctxt    = alg_ctx
                     , dd_cType   = Nothing
                     , dd_kindSig = fmap synifyKindSig kindSig
                     , dd_cons    = cons 
-                    , dd_derivs  = deriv }
+                    , dd_derivs  = alg_deriv }
  in DataDecl { tcdLName = name, tcdTyVars = tyvars, tcdDataDefn = defn
              , tcdFVs = placeHolderNames }
 
