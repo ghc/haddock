@@ -18,7 +18,7 @@ module Haddock.Convert where
 
 
 import HsSyn
-import TcType ( tcSplitTyConApp_maybe, tcSplitSigmaTy )
+import TcType ( tcSplitSigmaTy )
 import TypeRep
 import Type(isStrLitTy)
 import Kind ( splitKindFunTys, synTyConResKind )
@@ -90,22 +90,23 @@ synifyATDefault :: TyCon -> LTyFamInstDecl Name
 synifyATDefault tc = noLoc (synifyAxiom ax)
   where Just ax = tyConFamilyCoercion_maybe tc
 
--- TODO (RAE): make convert axioms into instance groups as necessary
+synifyAxBranch :: TyCon -> CoAxBranch -> TyFamInstEqn Name
+synifyAxBranch tc (CoAxBranch { cab_tvs = tvs, cab_lhs = args, cab_rhs = rhs })
+  = let name   = synifyName tc
+        typats = map (synifyType WithinType) args
+        hs_rhs = synifyType WithinType rhs
+    in TyFamInstEqn { tfie_tycon = name
+                    , tfie_pats  = HsWB { hswb_cts = typats
+                                        , hswb_kvs = []
+                                        , hswb_tvs = map tyVarName tvs }
+                    , tfie_rhs   = hs_rhs }
+
 synifyAxiom :: CoAxiom -> TyFamInstDecl Name
-synifyAxiom (CoAxiom { co_ax_tvs = tvs, co_ax_lhs = lhs, co_ax_rhs = rhs })
-  | Just (tc, args) <- tcSplitTyConApp_maybe lhs
-  = let name      = synifyName tc
-        typats    = map (synifyType WithinType) args
-        hs_rhs_ty = synifyType WithinType rhs
-    in TyFamInstDecl { tfid_eqns = [noLoc $ TyFamInstEqn { tfie_tycon = name 
-                                                         , tfie_pats =
-                                                             HsWB { hswb_cts = typats
-                                                                  , hswb_kvs = []
-                                                                  , hswb_tvs = map tyVarName tvs }
-                                                         , tfie_rhs = hs_rhs_ty }]
-                     , tfid_fvs = placeHolderNames }
-  | otherwise
-  = error "synifyAxiom" 
+synifyAxiom (CoAxiom { co_ax_tc = tc, co_ax_branches = branches })
+  = let eqns = map (noLoc . synifyAxBranch tc) branches
+    in TyFamInstDecl { tfid_eqns  = eqns
+                     , tfid_group = (length branches /= 1)
+                     , tfid_fvs   = placeHolderNames }
 
 synifyTyCon :: TyCon -> TyClDecl Name
 synifyTyCon tc
@@ -130,8 +131,8 @@ synifyTyCon tc
                                       , dd_derivs = Nothing }
            , tcdFVs = placeHolderNames }
   | isSynFamilyTyCon tc 
-  = case synTyConRhs tc of
-        SynFamilyTyCon ->
+  = case synTyConRhs_maybe tc of
+        Just (SynFamilyTyCon {}) ->
           FamDecl (FamilyDecl TypeFamily (synifyName tc) (synifyTyVars (tyConTyVars tc))
                               (Just (synifyKindSig (synTyConResKind tc))))
         _ -> error "synifyTyCon: impossible open type synonym?"
@@ -143,11 +144,13 @@ synifyTyCon tc
                               Nothing) --always kind '*'
         _ -> error "synifyTyCon: impossible open data type?"
   | isSynTyCon tc
-  = SynDecl { tcdLName = synifyName tc
-            , tcdTyVars = synifyTyVars (tyConTyVars tc)
-            , tcdRhs = synifyType WithinType (synTyConType tc)
-            , tcdFVs = placeHolderNames }
-
+  = case synTyConRhs_maybe tc of
+        Just (SynonymTyCon ty) ->
+          SynDecl { tcdLName = synifyName tc
+                  , tcdTyVars = synifyTyVars (tyConTyVars tc)
+                  , tcdRhs = synifyType WithinType ty
+                  , tcdFVs = placeHolderNames }
+        _ -> error "synifyTyCon: impossible synTyCon"
   | otherwise =
   -- (closed) newtype and data
   let
@@ -176,10 +179,7 @@ synifyTyCon tc
   cons = map (synifyDataCon use_gadt_syntax) (tyConDataCons tc)
   -- "deriving" doesn't affect the signature, no need to specify any.
   alg_deriv = Nothing
-  defn | Just (_, syn_rhs) <- synTyConDefn_maybe tc 
-       = TySynonym (synifyType WithinType syn_rhs)
-       | otherwise
-       = HsDataDefn { dd_ND      = alg_nd
+  defn = HsDataDefn { dd_ND      = alg_nd
                     , dd_ctxt    = alg_ctx
                     , dd_cType   = Nothing
                     , dd_kindSig = fmap synifyKindSig kindSig

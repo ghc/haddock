@@ -460,9 +460,11 @@ renameClsInstD (ClsInstDecl { cid_poly_ty =ltype, cid_tyfam_insts = lATs, cid_da
 
 
 renameTyFamInstD :: TyFamInstDecl Name -> RnM (TyFamInstDecl DocName)
-renameTyFamInstD (TyFamInstDecl { tfid_eqns = eqns })
+renameTyFamInstD (TyFamInstDecl { tfid_eqns = eqns , tfid_group = eqn_group })
   = do { eqns' <- mapM (renameLThing renameTyFamInstEqn) eqns
-       ; return (TyFamInstDecl { tfid_eqns = eqns', tfid_fvs = placeHolderNames }) }
+       ; return (TyFamInstDecl { tfid_eqns = eqns'
+                               , tfid_group = eqn_group
+                               , tfid_fvs = placeHolderNames }) }
 
 renameTyFamInstEqn :: TyFamInstEqn Name -> RnM (TyFamInstEqn DocName)
 renameTyFamInstEqn (TyFamInstEqn { tfie_tycon = tc, tfie_pats = pats_w_bndrs, tfie_rhs = rhs })
