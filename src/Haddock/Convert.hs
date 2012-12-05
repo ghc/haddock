@@ -26,6 +26,7 @@ import Name
 import Var
 import Class
 import TyCon
+import CoAxiom
 import DataCon
 import BasicTypes ( TupleSort(..) )
 import TysPrim ( alphaTyVars )
@@ -101,9 +102,9 @@ synifyAxBranch tc (CoAxBranch { cab_tvs = tvs, cab_lhs = args, cab_rhs = rhs })
                                         , hswb_tvs = map tyVarName tvs }
                     , tfie_rhs   = hs_rhs }
 
-synifyAxiom :: CoAxiom -> TyFamInstDecl Name
+synifyAxiom :: CoAxiom br -> TyFamInstDecl Name
 synifyAxiom (CoAxiom { co_ax_tc = tc, co_ax_branches = branches })
-  = let eqns = map (noLoc . synifyAxBranch tc) branches
+  = let eqns = brListMap (noLoc . synifyAxBranch tc) branches
     in TyFamInstDecl { tfid_eqns  = eqns
                      , tfid_group = (length branches /= 1)
                      , tfid_fvs   = placeHolderNames }
