@@ -106,7 +106,7 @@ synifyAxiom :: CoAxiom br -> TyFamInstDecl Name
 synifyAxiom (CoAxiom { co_ax_tc = tc, co_ax_branches = branches })
   = let eqns = brListMap (noLoc . synifyAxBranch tc) branches
     in TyFamInstDecl { tfid_eqns  = eqns
-                     , tfid_group = (length branches /= 1)
+                     , tfid_group = (brListLength branches /= 1)
                      , tfid_fvs   = placeHolderNames }
 
 synifyTyCon :: TyCon -> TyClDecl Name
