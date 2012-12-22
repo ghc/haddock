@@ -92,13 +92,14 @@ synifyATDefault tc = noLoc (synifyAxiom ax)
   where Just ax = tyConFamilyCoercion_maybe tc
 
 synifyAxBranch :: TyCon -> CoAxBranch -> TyFamInstEqn Name
-synifyAxBranch tc (CoAxBranch { cab_tvs = tvs, cab_lhs = args, cab_rhs = rhs })
-  = let name   = synifyName tc
-        typats = map (synifyType WithinType) args
-        hs_rhs = synifyType WithinType rhs
+synifyAxBranch tc (CoAxBranch { cab_tvs = tkvs, cab_lhs = args, cab_rhs = rhs })
+  = let name       = synifyName tc
+        typats     = map (synifyType WithinType) args
+        hs_rhs     = synifyType WithinType rhs
+        (kvs, tvs) = partition isKindVar tkvs
     in TyFamInstEqn { tfie_tycon = name
                     , tfie_pats  = HsWB { hswb_cts = typats
-                                        , hswb_kvs = []
+                                        , hswb_kvs = map tyVarName kvs
                                         , hswb_tvs = map tyVarName tvs }
                     , tfie_rhs   = hs_rhs }
 
@@ -214,11 +215,14 @@ synifyDataCon use_gadt_syntax dc = noLoc $
 
   linear_tys = zipWith (\ty bang ->
             let tySyn = synifyType WithinType ty
-            in case bang of
-                 HsUnpackFailed -> noLoc $ HsBangTy HsStrict tySyn
-                 HsNoBang       -> tySyn
-                      -- HsNoBang never appears, it's implied instead.
-                 _              -> noLoc $ HsBangTy bang tySyn
+                src_bang = case bang of
+                             HsUnpack -> HsBang True
+                             HsStrict -> HsBang False
+                             _        -> bang
+            in case src_bang of
+                 HsNoBang -> tySyn
+                 _        -> noLoc $ HsBangTy bang tySyn
+            -- HsNoBang never appears, it's implied instead.
           )
           arg_tys (dataConStrictMarks dc)
   field_tys = zipWith (\field synTy -> ConDeclField
