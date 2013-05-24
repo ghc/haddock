@@ -118,7 +118,7 @@ synifyTyCon tc
                          let mk_hs_tv realKind fakeTyVar 
                                 = noLoc $ KindedTyVar (getName fakeTyVar) 
                                                       (synifyKindSig realKind)
-                         in HsQTvs { hsq_kvs = []   -- No kind polymorhism
+                         in HsQTvs { hsq_kvs = []   -- No kind polymorphism
                                    , hsq_tvs = zipWith mk_hs_tv (fst (splitKindFunTys (tyConKind tc)))
                                                                 alphaTyVars --a, b, c... which are unfortunately all kind *
                                    }
@@ -216,9 +216,9 @@ synifyDataCon use_gadt_syntax dc = noLoc $
   linear_tys = zipWith (\ty bang ->
             let tySyn = synifyType WithinType ty
                 src_bang = case bang of
-                             HsUnpack -> HsBang True
-                             HsStrict -> HsBang False
-                             _        -> bang
+                             HsUnpack {} -> HsUserBang (Just True) True
+                             HsStrict    -> HsUserBang (Just False) True
+                             _           -> bang
             in case src_bang of
                  HsNoBang -> tySyn
                  _        -> noLoc $ HsBangTy bang tySyn

@@ -1,4 +1,4 @@
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE CPP, MagicHash #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Haddock.Interface.AttachInstances
@@ -20,37 +20,43 @@ import Haddock.Convert
 import Control.Arrow
 import Data.List
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
-import GHC
-import Name
-import InstEnv
 import Class
-import GhcMonad (withSession)
-import TysPrim( funTyCon )
-import MonadUtils (liftIO)
-import TcRnDriver (tcRnGetInfo)
-import TypeRep
-import Var hiding (varName)
-import TyCon
-import PrelNames
 import FastString
+import GHC
+import GhcMonad (withSession)
+import Id
+import InstEnv
+import MonadUtils (liftIO)
+import Name
+import PrelNames
+import TcRnDriver (tcRnGetInfo)
+import TcType (tcSplitSigmaTy)
+import TyCon
+import TypeRep
+import TysPrim( funTyCon )
+import Var hiding (varName)
 #define FSLIT(x) (mkFastString# (x#))
 
+type ExportedNames = Set.Set Name
+type Modules = Set.Set Module
+type ExportInfo = (ExportedNames, Modules)
 
-attachInstances :: [Interface] -> InstIfaceMap -> Ghc [Interface]
-attachInstances ifaces instIfaceMap = mapM attach ifaces
+attachInstances :: ExportInfo -> [Interface] -> InstIfaceMap -> Ghc [Interface]
+attachInstances expInfo ifaces instIfaceMap = mapM attach ifaces
   where
     -- TODO: take an IfaceMap as input
     ifaceMap = Map.fromList [ (ifaceMod i, i) | i <- ifaces ]
 
     attach iface = do
-      newItems <- mapM (attachToExportItem iface ifaceMap instIfaceMap)
+      newItems <- mapM (attachToExportItem expInfo iface ifaceMap instIfaceMap)
                        (ifaceExportItems iface)
       return $ iface { ifaceExportItems = newItems }
 
 
-attachToExportItem :: Interface -> IfaceMap -> InstIfaceMap -> ExportItem Name -> Ghc (ExportItem Name)
-attachToExportItem iface ifaceMap instIfaceMap export =
+attachToExportItem :: ExportInfo -> Interface -> IfaceMap -> InstIfaceMap -> ExportItem Name -> Ghc (ExportItem Name)
+attachToExportItem expInfo iface ifaceMap instIfaceMap export =
   case export of
     ExportDecl { expItemDecl = L _ (TyClD d) } -> do
       mb_info <- getAllInfo (tcdName d)
@@ -58,9 +64,14 @@ attachToExportItem iface ifaceMap instIfaceMap export =
             export {
               expItemInstances =
                 case mb_info of
-                  Just (_, _, instances) ->
+                  Just (_, _, cls_instances, _fam_instances) ->
+{-
                     let insts = map (first synifyInstHead) $ sortImage (first instHead)
-                                [ (instanceHead i, getName i) | i <- instances ]
+                                [ (instanceSig i, getName i) | i <- instances ]
+-}
+                    let insts = map (first synifyInstHead) $ sortImage (first instHead) $
+                                filter (\((_,_,cls,tys),_) -> not $ isInstanceHidden expInfo cls tys)
+                                [ (instanceHead' i, getName i) | i <- cls_instances ]
                     in [ (inst, lookupInstDoc name iface ifaceMap instIfaceMap)
                        | (inst, name) <- insts ]
                   Nothing -> []
@@ -89,9 +100,23 @@ lookupInstDoc name iface ifaceMap instIfaceMap =
     modName = nameModule name
 
 
+-- | Like GHC's 'instanceHead' but drops "silent" arguments.
+instanceHead' :: ClsInst -> ([TyVar], ThetaType, Class, [Type])
+instanceHead' ispec = (tvs, dropSilentArgs dfun theta, cls, tys)
+  where
+    dfun = is_dfun ispec
+    (tvs, cls, tys) = instanceHead ispec
+    (_, theta, _) = tcSplitSigmaTy (idType dfun)
+
+-- | Drop "silent" arguments. See GHC Note [Silent superclass
+-- arguments].
+dropSilentArgs :: DFunId -> ThetaType -> ThetaType
+dropSilentArgs dfun theta = drop (dfunNSilent dfun) theta
+
+
 -- | Like GHC's getInfo but doesn't cut things out depending on the
 -- interative context, which we don't set sufficiently anyway.
-getAllInfo :: GhcMonad m => Name -> m (Maybe (TyThing,Fixity,[ClsInst]))
+getAllInfo :: GhcMonad m => Name -> m (Maybe (TyThing,Fixity,[ClsInst],[FamInst Branched]))
 getAllInfo name = withSession $ \hsc_env -> do 
    (_msgs, r) <- liftIO $ tcRnGetInfo hsc_env name
    return r
@@ -143,3 +168,42 @@ funTyConName = mkWiredInName gHC_PRIM
                         funTyConKey
                         (ATyCon funTyCon)       -- Relevant TyCon
                         BuiltInSyntax
+
+--------------------------------------------------------------------------------
+-- Filtering hidden instances
+--------------------------------------------------------------------------------
+
+-- | A class or data type is hidden iff
+--
+-- * it is defined in one of the modules that are being processed
+--
+-- * and it is not exported by any non-hidden module
+isNameHidden :: ExportInfo -> Name -> Bool
+isNameHidden (names, modules) name =
+  nameModule name `Set.member` modules &&
+  not (name `Set.member` names)
+
+-- | We say that an instance is «hidden» iff its class or any (part)
+-- of its type(s) is hidden.
+isInstanceHidden :: ExportInfo -> Class -> [Type] -> Bool
+isInstanceHidden expInfo cls tys =
+    instClassHidden || instTypeHidden
+  where
+    instClassHidden :: Bool
+    instClassHidden = isNameHidden expInfo $ getName cls
+
+    instTypeHidden :: Bool
+    instTypeHidden = any typeHidden tys
+
+    nameHidden :: Name -> Bool
+    nameHidden = isNameHidden expInfo
+
+    typeHidden :: Type -> Bool
+    typeHidden t =
+      case t of
+        TyVarTy {} -> False
+        AppTy t1 t2 -> typeHidden t1 || typeHidden t2
+        TyConApp tcon args -> nameHidden (getName tcon) || any typeHidden args
+        FunTy t1 t2 -> typeHidden t1 || typeHidden t2
+        ForAllTy _ ty -> typeHidden ty
+        LitTy _ -> False
