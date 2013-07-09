@@ -10,8 +10,7 @@ import           Data.Monoid
 import           Data.String
 import           DynFlags (DynFlags, defaultDynFlags)
 import           Haddock.Doc (combineStringNodes)
-import           Haddock.Lex (tokenise)
-import qualified Haddock.Parse as Parse
+import qualified Haddock.Parser as Parse
 import           Haddock.Types
 import           Outputable (Outputable, showSDoc, ppr)
 import           RdrName (RdrName)
@@ -34,22 +33,70 @@ instance IsString a => IsString (Maybe a) where
   fromString = Just . fromString
 
 parseParas :: String -> Maybe (Doc RdrName)
-parseParas s = Parse.parseParas $ tokenise dynFlags s (0,0)
+parseParas s = Parse.parseParas dynFlags s
 
 parseString :: String -> Maybe (Doc RdrName)
-parseString s = Parse.parseString $ tokenise dynFlags s (0,0)
+parseString s = Parse.parseString dynFlags s
 
 main :: IO ()
 main = hspec spec
 
-infix 1 `shouldParseTo`
-shouldParseTo :: String -> Doc RdrName -> Expectation
-shouldParseTo input ast = (combineStringNodes <$> parseParas input)
-                          `shouldBe` Just ast
-
 spec :: Spec
 spec = do
+  describe "parseString" $ do
+    let infix 1 `shouldParseTo`
+        shouldParseTo :: String -> Doc RdrName -> Expectation
+        shouldParseTo input ast = parseString input `shouldBe` Just ast
+
+    context "when parsing URLs" $ do
+      it "parses a URL" $ do
+        "<http://example.com/>" `shouldParseTo`
+          hyperlink "http://example.com/" Nothing <> "\n"
+
+      it "accepts an optional label" $ do
+        "<http://example.com/ some link>" `shouldParseTo`
+          hyperlink "http://example.com/" "some link" <> "\n"
+
+      it "finishes URL parsing as soon as it sees >, even if it's escaped" $ do
+        "<http://examp\\>le.com" `shouldParseTo`
+          hyperlink "http://examp\\" Nothing <> "le.com\n"
+
+        "<http://exa\\>mp\\>le.com>" `shouldParseTo`
+          hyperlink "http://exa\\" Nothing <> "mp>le.com>\n"
+
+        -- Likewise in label
+        "<http://example.com f\\>oo>" `shouldParseTo`
+          hyperlink "http://example.com" "f\\" <> "oo>\n"
+
+      it "parses inline URLs" $ do
+        "Not yet working, see <http://trac.haskell.org/haddock/ticket/223>\n , isEmptyChan" `shouldParseTo`
+             "Not yet working, see "
+          <> hyperlink "http://trac.haskell.org/haddock/ticket/223" Nothing
+          <> "\n , isEmptyChan\n"
+
+      context "when autolinking URLs" $ do
+        it "autolinks HTTP URLs" $ do
+          "http://example.com/" `shouldParseTo`
+            hyperlink "http://example.com/" Nothing <> "\n"
+
+        it "autolinks HTTPS URLs" $ do
+          "https://www.example.com/" `shouldParseTo`
+            hyperlink "https://www.example.com/" Nothing <> "\n"
+
+        it "autolinks FTP URLs" $ do
+          "ftp://example.com/" `shouldParseTo`
+            hyperlink "ftp://example.com/" Nothing <> "\n"
+
+        it "does not include trailing punctuation" $ do
+          "http://example.com/. Some other sentence." `shouldParseTo`
+            hyperlink "http://example.com/" Nothing <> ". Some other sentence.\n"
+
   describe "parseParas" $ do
+    let infix 1 `shouldParseTo`
+        shouldParseTo :: String -> Doc RdrName -> Expectation
+        shouldParseTo input ast = (combineStringNodes <$> parseParas input)
+                                  `shouldBe` Just ast
+
     it "parses a paragraph" $ do
       "foobar" `shouldParseTo` DocParagraph "foobar\n"
 
@@ -101,7 +148,7 @@ spec = do
       it "accepts other elements in a codeblock" $ do
         "@/emphasis/ \"Module\" <<picture>>@" `shouldParseTo`
           (DocCodeBlock $ DocEmphasis "emphasis" <> " "
-                <> DocModule "Module" <> " " <> DocPic "picture")
+                <> DocModule "Module" <> " " <> pic "picture" Nothing)
 
     context "when parsing monospaced strings" $ do
       it "monospaces inline strings" $ do
@@ -119,7 +166,7 @@ spec = do
           (DocParagraph $
                "hey "
             <> DocMonospaced (DocEmphasis "emphasis" <> " "
-                              <> DocModule "Module" <> " " <> DocPic "picture")
+                              <> DocModule "Module" <> " " <> pic "picture" Nothing)
             <> " world\n")
 
 
@@ -127,7 +174,24 @@ spec = do
       it "parses a simple unordered list" $ do
         "* point one\n\n* point two" `shouldParseTo`
           DocUnorderedList [ DocParagraph " point one\n"
-                                 , DocParagraph " point two\n"]
+                           , DocParagraph " point two\n"]
+
+        "* 1.parameter re :  the derived regular expression"
+          ++ "\n\n- returns : empty String" `shouldParseTo`
+          (DocUnorderedList
+           [DocParagraph " 1.parameter re :  the derived regular expression\n",
+            DocParagraph " returns : empty String\n"])
+
+      it "doesn't accept a list where unexpected" $ do
+        " expression?\n -> matches\n\n    * 1.parameter \n\n"
+          `shouldParseTo`
+           DocParagraph ("expression?\n -> matches\n") <> DocUnorderedList [DocParagraph " 1.parameter \n"]
+
+
+      it "parses a simple unordered list without the empty line separator" $ do
+        "* point one\n* point two" `shouldParseTo`
+          DocUnorderedList [ DocParagraph " point one\n"
+                           , DocParagraph " point two\n"]
 
       it "parses an empty unordered list" $ do
         "*" `shouldParseTo` DocUnorderedList [DocParagraph "\n"]
@@ -150,10 +214,15 @@ spec = do
     context "when parsing ordered lists" $ do
       it "parses a simple ordered list" $ do
         "1. point one\n\n2. point two" `shouldParseTo`
-          DocOrderedList [
-              DocParagraph " point one\n"
-            , DocParagraph " point two\n"
-            ]
+          DocOrderedList [ DocParagraph " point one\n"
+                         , DocParagraph " point two\n"
+                         ]
+
+      it "parses a simple ordered list without the newline separator" $ do
+        "1. point one\n2. point two" `shouldParseTo`
+          DocOrderedList [ DocParagraph " point one\n"
+                         , DocParagraph " point two\n"
+                         ]
 
       it "parses an empty list" $ do
         "1." `shouldParseTo` DocOrderedList [DocParagraph "\n"]
@@ -181,6 +250,10 @@ spec = do
     context "when parsing definition lists" $ do
       it "parses a simple list" $ do
         "[foo] bar\n\n[baz] quux" `shouldParseTo`
+          DocDefList [("foo", " bar\n"), ("baz", " quux\n")]
+
+      it "parses a simple list without the newline separator" $ do
+        "[foo] bar\n[baz] quux" `shouldParseTo`
           DocDefList [("foo", " bar\n"), ("baz", " quux\n")]
 
       it "parses a list with unicode in it" $ do
@@ -267,55 +340,6 @@ spec = do
                                       }
                             ]
 
-    context "when parsing a URL" $ do
-      it "parses a URL" $ do
-        "<http://example.com/>" `shouldParseTo`
-          (DocParagraph $ hyperlink "http://example.com/" Nothing <> "\n")
-
-      it "accepts an optional label" $ do
-        "<http://example.com/ some link>" `shouldParseTo`
-          (DocParagraph $ hyperlink "http://example.com/" "some link" <> "\n")
-
-      it "consecutive URL and URL + label" $ do
-        (" \nA plain URL: <http://example.com/>\n\n A URL with a "
-                    ++ "label: <http://example.com/ some link>") `shouldParseTo`
-          DocParagraph (
-            "A plain URL: " <>
-              DocHyperlink (Hyperlink "http://example.com/" Nothing) <> "\n"
-          ) <>
-          DocParagraph (
-            "A URL with a label: " <>
-              DocHyperlink (Hyperlink "http://example.com/" "some link") <> "\n"
-          )
-
-      it "finishes URL parsing as soon as it sees >, even if it's escaped" $ do
-        "<http://examp\\>le.com" `shouldParseTo`
-          DocParagraph (
-            DocHyperlink (Hyperlink "http://examp\\" Nothing) <> "le.com\n"
-          )
-
-        "<http://exa\\>mp\\>le.com>" `shouldParseTo`
-          DocParagraph (
-            DocHyperlink (Hyperlink "http://exa\\" Nothing) <> "mp>le.com>\n"
-          )
-
-        -- Likewise in label
-        "<http://example.com f\\>oo>" `shouldParseTo`
-          DocParagraph (
-            DocHyperlink (Hyperlink "http://example.com" "f\\") <> "oo>\n"
-          )
-
-      it "parses inline URLs" $ do
-        (" Not yet working, see <http://trac.haskell.org"
-                    ++ "/haddock/ticket/223>\n , isEmptyChan") `shouldParseTo`
-          DocParagraph
-                ("Not yet working, see "
-                 <> ((DocHyperlink
-                      (Hyperlink { hyperlinkUrl = "http://trac.haskell.org"
-                                                  ++ "/haddock/ticket/223"
-                                 , hyperlinkLabel = Nothing
-                                 })) <> "\n , isEmptyChan\n"))
-
     context "when parsing properties" $ do
       it "can parse a single property" $ do
         "prop> 23 == 23" `shouldParseTo` DocProperty "23 == 23"
@@ -349,19 +373,19 @@ spec = do
     context "when parsing pictures" $ do
       it "parses a simple picture" $ do
         "<<baz>>" `shouldParseTo`
-          DocParagraph ((DocPic "baz") <> "\n")
+          DocParagraph ((pic "baz" Nothing) <> "\n")
 
-      it "parses a picture with spaces" $ do
+      it "parses a picture with a title" $ do
         "<<b a z>>" `shouldParseTo`
-          DocParagraph ((DocPic "b a z") <> "\n")
+          DocParagraph ((pic "b" $ Just "a z") <> "\n")
 
       it "parses a picture with unicode" $ do
         "<<灼眼のシャナ>>" `shouldParseTo`
-          DocParagraph ((DocPic "灼眼のシャナ") <> "\n")
+          DocParagraph ((pic "灼眼のシャナ" Nothing) <> "\n")
 
       it "doesn't allow for escaping of the closing tags" $ do -- bug?
         "<<ba\\>>z>>" `shouldParseTo`
-          (DocParagraph $ DocPic "ba\\" <> "z>>\n")
+          (DocParagraph $ pic "ba\\" Nothing <> "z>>\n")
 
     context "when parsing anchors" $ do
       it "should parse a single word anchor" $ do
@@ -389,10 +413,7 @@ spec = do
       it "[@q/uu/x@] h\\ney" $ do
         "[@q/uu/x@] h\ney" `shouldParseTo`
           DocDefList
-                [(DocMonospaced
-                  ((DocString "q")
-                   <> ((DocEmphasis (DocString "uu"))
-                       <> "x")), " h\ney\n")]
+                [(DocMonospaced ("q" <> DocEmphasis "uu" <> "x"), " h\ney\n")]
 
       it "[qu\\nx] hey" $ do
         parseParas "[qu\nx] hey" `shouldBe` Nothing
@@ -414,3 +435,6 @@ spec = do
   where
     hyperlink :: String -> Maybe String -> Doc RdrName
     hyperlink url = DocHyperlink . Hyperlink url
+
+    pic :: String -> Maybe String -> Doc RdrName
+    pic uri = DocPic . Picture uri
