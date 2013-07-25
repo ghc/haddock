@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveFunctor #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveFunctor, GADTs #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -----------------------------------------------------------------------------
 -- |
@@ -19,18 +19,14 @@ module Haddock.Types (
   , HsDocString, LHsDocString
  ) where
 
-
 import Control.Exception
 import Control.Arrow
 import Control.DeepSeq
 import Data.Typeable
 import Data.Map (Map)
-import Data.Maybe
 import qualified Data.Map as Map
-import Data.Monoid
 import GHC hiding (NoLink)
 import OccName
-
 
 -----------------------------------------------------------------------------
 -- * Convenient synonyms
@@ -226,11 +222,6 @@ data Documentation name = Documentation
   } deriving Functor
 
 
-combineDocumentation :: Documentation name -> Maybe (Doc name)
-combineDocumentation (Documentation Nothing Nothing) = Nothing
-combineDocumentation (Documentation mDoc mWarning)   = Just (fromMaybe mempty mWarning `mappend` fromMaybe mempty mDoc)
-
-
 -- | Arguments and result are indexed by Int, zero-based from the left,
 -- because that's the easiest to use when recursing over types.
 type FnArgsDoc name = Map Int (Doc name)
@@ -314,12 +305,6 @@ data Doc id
   | DocProperty String
   | DocExamples [Example]
   deriving (Functor)
-
-
-instance Monoid (Doc id) where
-  mempty  = DocEmpty
-  mappend = DocAppend
-
 
 instance NFData a => NFData (Doc a) where
   rnf doc = case doc of

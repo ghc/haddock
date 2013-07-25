@@ -103,8 +103,6 @@ executable haddock
       Haddock.Interface.LexParseRn
       Haddock.Interface.ParseModuleHeader
       Haddock.Parser
-      Haddock.Parser.Parser
-      Haddock.Parser.Lexer
       Haddock.Utils
       Haddock.Backends.Xhtml
       Haddock.Backends.Xhtml.Decl
@@ -175,8 +173,6 @@ library
     Haddock.Interface.LexParseRn
     Haddock.Interface.ParseModuleHeader
     Haddock.Parser
-    Haddock.Parser.Parser
-    Haddock.Parser.Lexer
     Haddock.Utils
     Haddock.Backends.Xhtml
     Haddock.Backends.Xhtml.Decl
@@ -236,6 +232,7 @@ test-suite spec
     , deepseq
     , array
     , hspec
+    , QuickCheck == 2.*
 
   build-depends:
       haddock

@@ -33,6 +33,9 @@ import Data.Char
 import Control.Monad
 import Data.Maybe
 import Data.List
+
+import Haddock.Doc (combineDocumentation)
+
 -- import Debug.Trace
 
 {- SAMPLE OUTPUT

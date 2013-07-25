@@ -24,6 +24,7 @@ import Haddock.Backends.Xhtml.Names
 import Haddock.Backends.Xhtml.Utils
 import Haddock.Types
 import Haddock.Utils
+import Haddock.Doc (combineDocumentation)
 
 import Text.XHtml hiding ( name, p, quote )
 import Data.Maybe (fromMaybe)
