@@ -12,9 +12,9 @@
 module Haddock.Parser (parseString, parseParas) where
 
 import           Control.Applicative
-import           Data.Attoparsec.ByteString   hiding (takeWhile1, take, inClass)
+import           Data.Attoparsec.ByteString hiding (parse, takeWhile1, take, inClass)
 import qualified Data.Attoparsec.ByteString.Char8 as A8
-import           Data.Attoparsec.ByteString.Char8 hiding (take, string)
+import           Data.Attoparsec.ByteString.Char8 hiding (parse, take, string)
 import qualified Data.ByteString as BS
 import           Data.Char (chr)
 import           Data.List (stripPrefix)
@@ -33,14 +33,15 @@ import           Haddock.Utf8
 
 default (Int)
 
+parse :: Parser a -> String -> Maybe a
+parse p = either (const Nothing) Just . parseOnly (p <* endOfInput) . encodeUtf8
+
 -- | Main entry point to the parser. Appends the newline character
 -- to the input string.
 parseParas :: DynFlags
               -> String -- ^ String to parse
               -> Maybe (Doc RdrName)
-parseParas d s = case parseOnly (p <* skipSpace) (encodeUtf8 $ s ++ "\n") of
-  Right r -> Just $ combineStringNodes r
-  _ -> Nothing
+parseParas d = fmap combineStringNodes . parse (p <* skipSpace) . (++ "\n")
   where
     p :: Parser (Doc RdrName)
     -- make sure that we don't swallow up whitespace belonging to next paragraph
@@ -62,9 +63,7 @@ parseString'' d = parseString' d . (++ "\n")
 -- | An internal use function. Split from the 'parseString' is useful
 -- as we can specify separately when we want the newline to be appended.
 parseString' :: DynFlags -> String -> Maybe (Doc RdrName)
-parseString' d s = case parseOnly p (encodeUtf8 s) of
-  Right r -> Just $ combineStringNodes r
-  _ -> Nothing
+parseString' d = fmap combineStringNodes . parse p
   where
     p :: Parser (Doc RdrName)
     p = mconcat <$> some (charEscape <|> monospace d <|> anchor <|> identifier d
