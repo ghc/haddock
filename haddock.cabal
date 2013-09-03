@@ -31,6 +31,9 @@ extra-source-files:
   src/haddock.sh
   html-test/src/*.hs
   html-test/ref/*.html
+  latex-test/src/*.hs
+  latex-test/ref/*/*.tex
+  latex-test/ref/*/*.sty
 
 data-dir:   resources
 data-files: html/frames.html
@@ -66,12 +69,11 @@ executable haddock
     ghc-options:          -funbox-strict-fields -Wall -fwarn-tabs
   else
     ghc-options:          -funbox-strict-fields -Wall -fwarn-tabs -O2
-  if !flag(in-ghc-tree)
-    build-tools: alex >= 3, happy >= 1.18
+
   build-depends:
     base >= 4.3 && < 4.8
   if flag(in-ghc-tree)
-    hs-source-dirs: src
+    hs-source-dirs: src, vendor/attoparsec-0.10.4.0
     cpp-options: -DIN_GHC_TREE
     build-depends:
       filepath,
@@ -84,6 +86,15 @@ executable haddock
       ghc >= 7.4 && < 7.8
     other-modules:
       Documentation.Haddock
+      Data.Attoparsec
+      Data.Attoparsec.ByteString
+      Data.Attoparsec.ByteString.Char8
+      Data.Attoparsec.Combinator
+      Data.Attoparsec.Number
+      Data.Attoparsec.ByteString.FastSet
+      Data.Attoparsec.ByteString.Internal
+      Data.Attoparsec.Internal
+      Data.Attoparsec.Internal.Types
       Haddock
       Haddock.Interface
       Haddock.Interface.Rename
@@ -91,8 +102,8 @@ executable haddock
       Haddock.Interface.AttachInstances
       Haddock.Interface.LexParseRn
       Haddock.Interface.ParseModuleHeader
-      Haddock.Lex
-      Haddock.Parse
+      Haddock.Parser
+      Haddock.Utf8
       Haddock.Utils
       Haddock.Backends.Xhtml
       Haddock.Backends.Xhtml.Decl
@@ -118,12 +129,10 @@ executable haddock
 
 library
   default-language:     Haskell2010
-  -- In a GHC tree - in particular, in a source tarball - we don't
-  -- require alex or happy
-  if !flag(in-ghc-tree)
-    build-tools: alex >= 3, happy >= 1.18
+
   build-depends:
     base >= 4.3 && < 4.8,
+    bytestring,
     filepath,
     directory,
     containers,
@@ -138,7 +147,7 @@ library
   else
     build-depends: ghc-paths
 
-  hs-source-dirs:       src
+  hs-source-dirs:       src, vendor/attoparsec-0.10.4.0
   if flag(dev)
     ghc-options:          -funbox-strict-fields -Wall -fwarn-tabs
   else
@@ -148,6 +157,15 @@ library
     Documentation.Haddock
 
   other-modules:
+    Data.Attoparsec
+    Data.Attoparsec.ByteString
+    Data.Attoparsec.ByteString.Char8
+    Data.Attoparsec.Combinator
+    Data.Attoparsec.Number
+    Data.Attoparsec.ByteString.FastSet
+    Data.Attoparsec.ByteString.Internal
+    Data.Attoparsec.Internal
+    Data.Attoparsec.Internal.Types
     Haddock
     Haddock.Interface
     Haddock.Interface.Rename
@@ -155,8 +173,8 @@ library
     Haddock.Interface.AttachInstances
     Haddock.Interface.LexParseRn
     Haddock.Interface.ParseModuleHeader
-    Haddock.Lex
-    Haddock.Parse
+    Haddock.Parser
+    Haddock.Utf8
     Haddock.Utils
     Haddock.Backends.Xhtml
     Haddock.Backends.Xhtml.Decl
@@ -189,36 +207,35 @@ test-suite html-test
   hs-source-dirs:   html-test
   build-depends:    base, directory, process, filepath, Cabal
 
+test-suite latex-test
+  type:             exitcode-stdio-1.0
+  default-language: Haskell2010
+  main-is:          run.lhs
+  hs-source-dirs:   latex-test
+  build-depends:    base, directory, process, filepath, Cabal
+
 test-suite spec
   type:             exitcode-stdio-1.0
   default-language: Haskell2010
   main-is:          Spec.hs
   hs-source-dirs:
       test
-    , test/nanospec
     , src
+    , vendor/attoparsec-0.10.4.0
 
   other-modules:
-      Test.Hspec
-      Haddock.ParseSpec
+      Haddock.ParserSpec
 
   build-depends:
       base
+    , bytestring
     , ghc
     , containers
     , deepseq
     , array
+    , hspec
+    , QuickCheck == 2.*
 
-  -- NOTE: As of this writing, Cabal does not properly handle alex/happy for
-  -- test suites.  We work around this by adding dist/build to hs-source-dirs,
-  -- so that the the generated lexer/parser from the library is used.  In
-  -- addition we depend on 'haddock', so that the library is compiled before
-  -- the test suite.
-  --
-  -- The corresponding cabal ticket is here:
-  -- https://github.com/haskell/cabal/issues/943
-  hs-source-dirs:
-      dist/build
   build-depends:
       haddock
 

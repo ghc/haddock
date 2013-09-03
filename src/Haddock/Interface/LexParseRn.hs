@@ -19,8 +19,7 @@ module Haddock.Interface.LexParseRn
 
 
 import Haddock.Types
-import Haddock.Lex
-import Haddock.Parse
+import Haddock.Parser
 import Haddock.Interface.ParseModuleHeader
 import Haddock.Doc
 
@@ -32,7 +31,6 @@ import GHC
 import Name
 import Outputable
 import RdrName
-import RnEnv
 
 
 processDocStrings :: DynFlags -> GlobalRdrEnv -> [HsDocString] -> ErrMsgM (Maybe (Doc Name))
@@ -51,19 +49,19 @@ processDocStringParas = process parseParas
 processDocString :: DynFlags -> GlobalRdrEnv -> HsDocString -> ErrMsgM (Maybe (Doc Name))
 processDocString = process parseString
 
-process :: ([LToken] -> Maybe (Doc RdrName))
+process :: (DynFlags -> String -> Maybe (Doc RdrName))
         -> DynFlags
         -> GlobalRdrEnv
         -> HsDocString
         -> ErrMsgM (Maybe (Doc Name))
 process parse dflags gre (HsDocString fs) = do
    let str = unpackFS fs
-   let toks = tokenise dflags str (0,0)  -- TODO: real position
-   case parse toks of
+   case parse dflags str of
      Nothing -> do
        tell [ "doc comment parse failed: " ++ str ]
        return Nothing
-     Just doc -> return (Just (rename dflags gre doc))
+     Just doc -> do
+       return (Just (rename dflags gre doc))
 
 
 processModuleHeader :: DynFlags -> GlobalRdrEnv -> SafeHaskellMode -> Maybe LHsDocString
@@ -96,7 +94,7 @@ rename dflags gre = rn
       DocAppend a b -> DocAppend (rn a) (rn b)
       DocParagraph doc -> DocParagraph (rn doc)
       DocIdentifier x -> do
-        let choices = dataTcOccs x
+        let choices = dataTcOccs' x
         let names = concatMap (\c -> map gre_name (lookupGRE_RdrName c gre)) choices
         case names of
           [] ->
@@ -109,6 +107,7 @@ rename dflags gre = rn
           a:b:_ | isTyConName a -> DocIdentifier a | otherwise -> DocIdentifier b
               -- If an id can refer to multiple things, we give precedence to type
               -- constructors.
+
       DocWarning doc -> DocWarning (rn doc)
       DocEmphasis doc -> DocEmphasis (rn doc)
       DocMonospaced doc -> DocMonospaced (rn doc)
@@ -125,6 +124,20 @@ rename dflags gre = rn
       DocExamples e -> DocExamples e
       DocEmpty -> DocEmpty
       DocString str -> DocString str
+
+dataTcOccs' :: RdrName -> [RdrName]
+-- If the input is a data constructor, return both it and a type
+-- constructor.  This is useful when we aren't sure which we are
+-- looking at.
+--
+-- We use this definition instead of the GHC's to provide proper linking to
+-- functions accross modules. See ticket #253 on Haddock Trac.
+dataTcOccs' rdr_name
+  | isDataOcc occ             = [rdr_name, rdr_name_tc]
+  | otherwise                 = [rdr_name]
+  where
+    occ = rdrNameOcc rdr_name
+    rdr_name_tc = setRdrNameSpace rdr_name tcName
 
 
 outOfScope :: DynFlags -> RdrName -> Doc a

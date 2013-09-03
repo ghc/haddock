@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveFunctor #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveFunctor, GADTs #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -----------------------------------------------------------------------------
 -- |
@@ -19,18 +19,14 @@ module Haddock.Types (
   , HsDocString, LHsDocString
  ) where
 
-
 import Control.Exception
 import Control.Arrow
 import Control.DeepSeq
 import Data.Typeable
 import Data.Map (Map)
-import Data.Maybe
 import qualified Data.Map as Map
-import Data.Monoid
 import GHC hiding (NoLink)
 import OccName
-
 
 -----------------------------------------------------------------------------
 -- * Convenient synonyms
@@ -201,7 +197,7 @@ data ExportItem name
       , expItemSubs :: ![name]
       }
 
-  -- | A section heading. 
+  -- | A section heading.
   | ExportGroup
       {
         -- | Section level (1, 2, 3, ...).
@@ -224,11 +220,6 @@ data Documentation name = Documentation
   { documentationDoc :: Maybe (Doc name)
   , documentationWarning :: !(Maybe (Doc name))
   } deriving Functor
-
-
-combineDocumentation :: Documentation name -> Maybe (Doc name)
-combineDocumentation (Documentation Nothing Nothing) = Nothing
-combineDocumentation (Documentation mDoc mWarning)   = Just (fromMaybe mempty mWarning `mappend` fromMaybe mempty mDoc)
 
 
 -- | Arguments and result are indexed by Int, zero-based from the left,
@@ -285,7 +276,6 @@ type DocInstance name = (InstHead name, Maybe (Doc name))
 -- of instance types.
 type InstHead name = ([HsType name], name, [HsType name])
 
-
 -----------------------------------------------------------------------------
 -- * Documentation comments
 -----------------------------------------------------------------------------
@@ -310,17 +300,11 @@ data Doc id
   | DocDefList [(Doc id, Doc id)]
   | DocCodeBlock (Doc id)
   | DocHyperlink Hyperlink
-  | DocPic String
+  | DocPic Picture
   | DocAName String
   | DocProperty String
   | DocExamples [Example]
   deriving (Functor)
-
-
-instance Monoid (Doc id) where
-  mempty  = DocEmpty
-  mappend = DocAppend
-
 
 instance NFData a => NFData (Doc a) where
   rnf doc = case doc of
@@ -356,8 +340,17 @@ data Hyperlink = Hyperlink
   } deriving (Eq, Show)
 
 
+data Picture = Picture
+  { pictureUri   :: String
+  , pictureTitle :: Maybe String
+  } deriving (Eq, Show)
+
+
 instance NFData Hyperlink where
   rnf (Hyperlink a b) = a `deepseq` b `deepseq` ()
+
+instance NFData Picture where
+  rnf (Picture a b) = a `deepseq` b `deepseq` ()
 
 
 data Example = Example
@@ -392,7 +385,7 @@ data DocMarkup id a = Markup
   , markupCodeBlock            :: a -> a
   , markupHyperlink            :: Hyperlink -> a
   , markupAName                :: String -> a
-  , markupPic                  :: String -> a
+  , markupPic                  :: Picture -> a
   , markupProperty             :: String -> a
   , markupExample              :: [Example] -> a
   }
