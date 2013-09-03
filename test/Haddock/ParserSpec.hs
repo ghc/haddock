@@ -57,7 +57,7 @@ spec = do
       property $ \xs ->
         -- filter out primes as we might end up with an identifier
         -- which will fail due to undefined DynFlags
-        parseString (filter (/= '\'') xs) `shouldSatisfy` isJust
+        (length . show . parseString . (filter (/= '\''))) xs `shouldSatisfy` (> 0)
 
     context "when parsing URLs" $ do
       it "parses a URL" $ do
@@ -125,7 +125,7 @@ spec = do
       property $ \xs ->
         -- filter out primes as we might end up with an identifier
         -- which will fail due to undefined DynFlags
-        parseParas (filter (/= '\'') xs) `shouldSatisfy` isJust
+        (length . show . parseParas . (filter (/= '\''))) xs `shouldSatisfy` (> 0)
 
     it "parses a paragraph" $ do
       "foobar" `shouldParseTo` DocParagraph "foobar\n"
