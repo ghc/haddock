@@ -16,7 +16,7 @@ import           Haddock.Types
 import           Outputable (Outputable, showSDoc, ppr)
 import           RdrName (RdrName)
 import           Test.Hspec
-import           Test.QuickCheck
+import           Test.QuickCheck (property)
 
 dynFlags :: DynFlags
 dynFlags = defaultDynFlags (error "dynFlags for Haddock tests: undefined")

@@ -15,13 +15,11 @@ import           Control.Applicative
 import           Data.Attoparsec.ByteString   hiding (takeWhile1, take, inClass)
 import qualified Data.Attoparsec.ByteString.Char8 as A8
 import           Data.Attoparsec.ByteString.Char8 hiding (take, string)
-import           Data.Bits        ((.|.),(.&.),shiftL,shiftR)
 import qualified Data.ByteString as BS
-import           Data.Char        (chr,ord)
+import           Data.Char (chr)
 import           Data.List (stripPrefix)
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid
-import           Data.Word        (Word8)
 import           DynFlags
 import           FastString (mkFastString)
 import           Haddock.Doc
@@ -31,6 +29,7 @@ import           Parser (parseIdentifier)
 import           RdrName
 import           SrcLoc (mkRealSrcLoc, unLoc)
 import           StringBuffer (stringToStringBuffer)
+import           Haddock.Utf8
 
 default (Int)
 
@@ -39,7 +38,7 @@ default (Int)
 parseParas :: DynFlags
               -> String -- ^ String to parse
               -> Maybe (Doc RdrName)
-parseParas d s = case parseOnly (p <* skipSpace) (encodeB $ s ++ "\n") of
+parseParas d s = case parseOnly (p <* skipSpace) (encodeUtf8 $ s ++ "\n") of
   Right r -> Just $ combineStringNodes r
   _ -> Nothing
   where
@@ -63,7 +62,7 @@ parseString'' d = parseString' d . (++ "\n")
 -- | An internal use function. Split from the 'parseString' is useful
 -- as we can specify separately when we want the newline to be appended.
 parseString' :: DynFlags -> String -> Maybe (Doc RdrName)
-parseString' d s = case parseOnly p (encodeB s) of
+parseString' d s = case parseOnly p (encodeUtf8 s) of
   Right r -> Just $ combineStringNodes r
   _ -> Nothing
   where
@@ -88,7 +87,7 @@ encodedChar = "&#" *> c <* ";"
 -- to ensure that we have already given a chance to more meaningful parsers
 -- before capturing their characers.
 string' :: Parser (Doc RdrName)
-string' = DocString . decodeB <$> takeWhile1 (`notElem` "/<@\" &'`\\")
+string' = DocString . decodeUtf8 <$> takeWhile1 (`notElem` "/<@\" &'`\\")
 
 -- | Emphasis parser.
 --
@@ -115,7 +114,7 @@ charEscape = "\\" *> (DocString . return <$> A8.satisfy (/= '\n'))
 -- >>> parseOnly anchor "#Hello world#"
 -- Right (DocAName "Hello world")
 anchor :: Parser (Doc RdrName)
-anchor = DocAName . decodeB <$> ("#" *> takeWhile1 (`notElem` "#\n") <* "#")
+anchor = DocAName . decodeUtf8 <$> ("#" *> takeWhile1 (`notElem` "#\n") <* "#")
 
 -- | Helper for markup structures surrounded with delimiters.
 stringBlock
@@ -137,13 +136,13 @@ stringBlock d f doc op ed n = do
 block :: String -> String -> String -> Parser String
 block op ed n = reverse . drop (length ed) . reverse <$> block' op ed
   where
-    block' op' ed' = string (encodeB op') *> mid
+    block' op' ed' = string (encodeUtf8 op') *> mid
       where
         mid :: Parser String
-        mid = decodeB <$> string (encodeB ed')
+        mid = decodeUtf8 <$> string (encodeUtf8 ed')
               <|> do
                 inner <- takeWithSkip (head ed') n
-                more <- decodeB <$> string (encodeB $ tail ed')
+                more <- decodeUtf8 <$> string (encodeUtf8 $ tail ed')
                         <|> block' "" ed'  -- not full ending, take more
                 return $ inner ++ more
 
@@ -153,7 +152,7 @@ block op ed n = reverse . drop (length ed) . reverse <$> block' op ed
 -- when the input string is empty.
 takeWithSkip :: Char -> String -> Parser String
 takeWithSkip s n = do
-  content <- decodeB <$> A8.scan (False, False) p >>= gotSome
+  content <- decodeUtf8 <$> A8.scan (False, False) p >>= gotSome
   if or (map (`elem` content) n) || last content /= s
     then fail "failed in takeWithSkip"
     else return content
@@ -181,7 +180,7 @@ moduleName :: Parser (Doc RdrName)
 moduleName = DocModule <$> ("\"" *> legalModule <* "\"")
   where legalModule = do
           n <- (:) <$> A8.satisfy (`elem` ['A' .. 'Z'])
-               <*> (decodeB <$> A8.takeWhile (`notElem` "\"\n"))
+               <*> (decodeUtf8 <$> A8.takeWhile (`notElem` "\"\n"))
 
           if any (`elem` n) " &[{}(=*)+]!#|@/;,^?"
             then fail "invalid characters in module name"
@@ -198,7 +197,7 @@ moduleName = DocModule <$> ("\"" *> legalModule <* "\"")
 -- >>> parseOnly picture "<<hello.png world>>"
 -- Right (DocPic (Picture "hello.png" (Just "world")))
 picture :: Parser (Doc RdrName)
-picture = DocPic . makePicture . decodeB <$> ("<<" *> takeWhile1 (`notElem` ">\n") <* ">>")
+picture = DocPic . makePicture . decodeUtf8 <$> ("<<" *> takeWhile1 (`notElem` ">\n") <* ">>")
 
 -- | Paragraph parser, called by 'parseParas'.
 paragraph :: DynFlags -> Parser (Doc RdrName)
@@ -217,7 +216,7 @@ parseLine :: (String -> Maybe (Doc RdrName)) -- ^ Parser to use
              -> (Doc RdrName -> a) -- ^ Doc function to wrap around the result
              -> BS.ByteString -- ^ Text to parse
              -> Parser a
-parseLine f doc str = maybe (fail "invalid string") (return . doc) (f $ decodeB str)
+parseLine f doc str = maybe (fail "invalid string") (return . doc) (f $ decodeUtf8 str)
 
 -- | Parses unordered (bullet) lists.
 unorderedList :: DynFlags -> Parser [Doc RdrName]
@@ -260,7 +259,7 @@ nonEmptyLine d = do
   parseLine (parseString'' d) id s
   where
     nonSpace xs
-      | not (any (not . isSpace) (decodeB xs)) = fail "empty line"
+      | not (any (not . isSpace) (decodeUtf8 xs)) = fail "empty line"
       | otherwise = return xs
 
 -- | Parses definition lists.
@@ -282,7 +281,7 @@ definitionList d = do
 -- | Parses birdtracks. No further markup is parsed after the birdtrack.
 -- Consecutive birdtracks are allowed.
 birdtracks :: Parser (Doc RdrName)
-birdtracks = DocCodeBlock . mconcat . map (DocString . (++ "\n") . decodeB) <$> line `sepBy1` "\n"
+birdtracks = DocCodeBlock . mconcat . map (DocString . (++ "\n") . decodeUtf8) <$> line `sepBy1` "\n"
   where
     line = optWs *> ">" *> A8.takeWhile (/= '\n')
 
@@ -295,15 +294,15 @@ examples = DocExamples <$> example
 example :: Parser [Example]
 example = do
   ws <- optWs
-  prompt <- decodeB <$> string ">>>"
-  expr <- (++ "\n") . decodeB <$> (A8.takeWhile (/= '\n') <* "\n")
+  prompt <- decodeUtf8 <$> string ">>>"
+  expr <- (++ "\n") . decodeUtf8 <$> (A8.takeWhile (/= '\n') <* "\n")
   results <- many result
   let exs = concat [ e | Left e <- results ]
       res = filter (not . null) [ r | Right r <- results ]
-  return $ makeExample (decodeB ws ++ prompt) expr res : exs
+  return $ makeExample (decodeUtf8 ws ++ prompt) expr res : exs
   where
     result = Left <$> example
-             <|> Right . decodeB <$> takeWhile1 (/= '\n') <* "\n"
+             <|> Right . decodeUtf8 <$> takeWhile1 (/= '\n') <* "\n"
 
 -- | Propery parser.
 --
@@ -312,7 +311,7 @@ example = do
 property :: Parser (Doc RdrName)
 property = do
     _ <- skipSpace
-    s <- decodeB <$> (string "prop>" *> takeWhile1 (/= '\n'))
+    s <- decodeUtf8 <$> (string "prop>" *> takeWhile1 (/= '\n'))
     return $ makeProperty ("prop>" ++ s)
 
 -- | Paragraph level codeblock. Anything between the two delimiting @
@@ -324,7 +323,7 @@ codeblock d = do
   -- fails but we still have a chance to get a codeblock by getting
   -- a monospaced doc on its own in the paragraph. With that, the cases
   -- are covered. This should be updated if the implementation ever changes.
-  s <- parseString' d . ('\n':) . decodeB <$> ("@\n" *> block' <* "@")
+  s <- parseString' d . ('\n':) . decodeUtf8 <$> ("@\n" *> block' <* "@")
   maybe (fail "codeblock") (return . DocCodeBlock) s
   where
     block' = A8.scan False p
@@ -336,14 +335,14 @@ codeblock d = do
 -- | Calls 'parseString'' on each line of a paragraph
 textParagraph :: DynFlags -> Parser (Doc RdrName)
 textParagraph d = do
-  s <- parseString' d . concatMap ((++ "\n") . decodeB) <$> line `sepBy1` "\n"
+  s <- parseString' d . concatMap ((++ "\n") . decodeUtf8) <$> line `sepBy1` "\n"
   maybe (fail "textParagraph") (return . docParagraph) s
   where
     line = takeWhile1 (/= '\n')
 
 -- | See 'picture' for adding a page title.
 url :: Parser (Doc RdrName)
-url = DocHyperlink . makeHyperlink . decodeB <$> ("<" *> takeWhile1 (`notElem` ">\n") <* ">")
+url = DocHyperlink . makeHyperlink . decodeUtf8 <$> ("<" *> takeWhile1 (`notElem` ">\n") <* ">")
       <|> autoUrl
 
 -- | Naive implementation of auto-linking. Will link everything after
@@ -351,7 +350,7 @@ url = DocHyperlink . makeHyperlink . decodeB <$> ("<" *> takeWhile1 (`notElem` "
 -- Single trailing punctuation character (.!?,) is split off.
 autoUrl :: Parser (Doc RdrName)
 autoUrl = do
-  link <- decodeB <$> urlLone
+  link <- decodeUtf8 <$> urlLone
   return $ formatLink link
   where
     urlLone = mappend <$> choice prefixes <*> takeWhile1 (not . isSpace)
@@ -434,72 +433,3 @@ makeProperty s = case strip s of
     DocProperty (dropWhile isSpace xs)
   xs ->
     error $ "makeProperty: invalid input " ++ show xs
-
--- | Helper that encodes and packs a 'String' into a 'BS.ByteString'
-encodeB :: String -> BS.ByteString
-encodeB = BS.pack . encode
-
--- | Helper that unpacks and decodes a 'BS.ByteString' into a 'String'
-decodeB :: BS.ByteString -> String
-decodeB = decode . BS.unpack
-
--- Copy/pasted functions from Codec.Binary.UTF8.String for encoding/decoding
--- | Character to use when 'encode' or 'decode' fail for a byte.
-replacementCharacter :: Char
-replacementCharacter = '\xfffd'
-
--- | Encode a Haskell String to a list of Word8 values, in UTF8 format.
-encode :: String -> [Word8]
-encode = concatMap (map fromIntegral . go . ord)
- where
-  go oc
-   | oc <= 0x7f       = [oc]
-
-   | oc <= 0x7ff      = [ 0xc0 + (oc `shiftR` 6)
-                        , 0x80 + oc .&. 0x3f
-                        ]
-
-   | oc <= 0xffff     = [ 0xe0 + (oc `shiftR` 12)
-                        , 0x80 + ((oc `shiftR` 6) .&. 0x3f)
-                        , 0x80 + oc .&. 0x3f
-                        ]
-   | otherwise        = [ 0xf0 + (oc `shiftR` 18)
-                        , 0x80 + ((oc `shiftR` 12) .&. 0x3f)
-                        , 0x80 + ((oc `shiftR` 6) .&. 0x3f)
-                        , 0x80 + oc .&. 0x3f
-                        ]
-
--- | Decode a UTF8 string packed into a list of Word8 values, directly to String
-decode :: [Word8] -> String
-decode [    ] = ""
-decode (c:cs)
-  | c < 0x80  = chr (fromEnum c) : decode cs
-  | c < 0xc0  = replacementCharacter : decode cs
-  | c < 0xe0  = multi1
-  | c < 0xf0  = multi_byte 2 0xf  0x800
-  | c < 0xf8  = multi_byte 3 0x7  0x10000
-  | c < 0xfc  = multi_byte 4 0x3  0x200000
-  | c < 0xfe  = multi_byte 5 0x1  0x4000000
-  | otherwise = replacementCharacter : decode cs
-  where
-    multi1 = case cs of
-      c1 : ds | c1 .&. 0xc0 == 0x80 ->
-        let d = ((fromEnum c .&. 0x1f) `shiftL` 6) .|.  fromEnum (c1 .&. 0x3f)
-        in if d >= 0x000080 then toEnum d : decode ds
-                            else replacementCharacter : decode ds
-      _ -> replacementCharacter : decode cs
-
-    multi_byte :: Int -> Word8 -> Int -> String
-    multi_byte i mask overlong = aux i cs (fromEnum (c .&. mask))
-      where
-        aux 0 rs acc
-          | overlong <= acc && acc <= 0x10ffff &&
-            (acc < 0xd800 || 0xdfff < acc)     &&
-            (acc < 0xfffe || 0xffff < acc)      = chr acc : decode rs
-          | otherwise = replacementCharacter : decode rs
-
-        aux n (r:rs) acc
-          | r .&. 0xc0 == 0x80 = aux (n-1) rs
-                               $ shiftL acc 6 .|. fromEnum (r .&. 0x3f)
-
-        aux _ rs     _ = replacementCharacter : decode rs
