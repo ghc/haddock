@@ -369,6 +369,13 @@ renameTyClD d = case d of
                       , tcdFDs = lfundeps', tcdSigs = lsigs', tcdMeths= emptyBag
                       , tcdATs = ats', tcdATDefs = at_defs', tcdDocs = [], tcdFVs = placeHolderNames })
 
+  KindDecl { tcdLName = lname, tcdKVars = lkvars, tcdTypeCons = lcons } -> do
+    lname'  <- renameL lname
+    lkvars' <- mapM renameL lkvars
+    lcons'  <- mapM (renameLThing renameTyConDecl) lcons
+    return KindDecl { tcdLName = lname', tcdKVars = lkvars', tcdTypeCons = lcons'
+                    , tcdFvs = placeHolderNames }
+
   where
     renameLFunDep (L loc (xs, ys)) = do
       xs' <- mapM rename xs
@@ -376,6 +383,22 @@ renameTyClD d = case d of
       return (L loc (xs', ys'))
 
     renameLSig (L loc sig) = return . L loc =<< renameSig sig
+
+renameTyConDecl :: TyConDecl Name -> RnM (TyConDecl DocName)
+renameTyConDecl (TyConDecl { tycon_name = lname, tycon_details = details, tycon_doc = doc }) = do
+  lname'   <- renameL lname
+  details' <- renameDetails details
+  doc'     <- mapM renameLDocHsSyn doc
+  return TyConDecl { tycon_name = lname', tycon_details = details'
+                   , tycon_doc = doc' }
+
+  where
+  renameDetails (RecCon ()) = return (RecCon ())
+  renameDetails (PrefixCon ps) = return . PrefixCon =<< mapM renameLType ps
+  renameDetails (InfixCon a b) = do
+    a' <- renameLType a
+    b' <- renameLType b
+    return (InfixCon a' b')
 
 renameFamilyDecl :: FamilyDecl Name -> RnM (FamilyDecl DocName)
 renameFamilyDecl (FamilyDecl { fdInfo = info, fdLName = lname
@@ -396,13 +419,15 @@ renameFamilyInfo (ClosedTypeFamily eqns)
 
 renameDataDefn :: HsDataDefn Name -> RnM (HsDataDefn DocName)
 renameDataDefn (HsDataDefn { dd_ND = nd, dd_ctxt = lcontext, dd_cType = cType
-                           , dd_kindSig = k, dd_cons = cons }) = do
+                           , dd_kindSig = k, dd_cons = cons
+                           , dd_try_promote = try_prom }) = do
     lcontext' <- renameLContext lcontext
     k'        <- renameMaybeLKind k
     cons'     <- mapM (mapM renameCon) cons
     -- I don't think we need the derivings, so we return Nothing
     return (HsDataDefn { dd_ND = nd, dd_ctxt = lcontext', dd_cType = cType
-                       , dd_kindSig = k', dd_cons = cons', dd_derivs = Nothing })
+                       , dd_kindSig = k', dd_cons = cons', dd_derivs = Nothing
+                       , dd_try_promote = try_prom })
 
 renameCon :: ConDecl Name -> RnM (ConDecl DocName)
 renameCon decl@(ConDecl { con_name = lname, con_qvars = ltyvars
@@ -426,7 +451,6 @@ renameCon decl@(ConDecl { con_name = lname, con_qvars = ltyvars
 
     renameResType (ResTyH98) = return ResTyH98
     renameResType (ResTyGADT t) = return . ResTyGADT =<< renameLType t
-
 
 renameConDeclFieldField :: ConDeclField Name -> RnM (ConDeclField DocName)
 renameConDeclFieldField (ConDeclField name t doc) = do

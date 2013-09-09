@@ -114,6 +114,13 @@ synifyAxiom ax@(CoAxiom { co_ax_tc = tc })
   | otherwise
   = error "synifyAxiom: closed/open family confusion"
 
+tryPromote :: TyCon -> Bool
+tryPromote tc =
+  case promotableTyConInfo tc of
+    -- False when promotion was explicitly disabled, true otherwise.
+    NeverPromote -> False
+    _            -> True
+
 synifyTyCon :: TyCon -> TyClDecl Name
 synifyTyCon tc
   | isFunTyCon tc || isPrimTyCon tc 
@@ -135,7 +142,8 @@ synifyTyCon tc
                                       , dd_kindSig = Just (synifyKindSig (tyConKind tc))
                                                -- we have their kind accurately:
                                       , dd_cons = []  -- No constructors
-                                      , dd_derivs = Nothing }
+                                      , dd_derivs = Nothing
+                                      , dd_try_promote = tryPromote tc }
            , tcdFVs = placeHolderNames }
 
   | isSynFamilyTyCon tc 
@@ -200,7 +208,9 @@ synifyTyCon tc
                     , dd_cType   = Nothing
                     , dd_kindSig = fmap synifyKindSig kindSig
                     , dd_cons    = cons 
-                    , dd_derivs  = alg_deriv }
+                    , dd_derivs  = alg_deriv
+                    , dd_try_promote = tryPromote tc
+                    }
  in DataDecl { tcdLName = name, tcdTyVars = tyvars, tcdDataDefn = defn
              , tcdFVs = placeHolderNames }
 
