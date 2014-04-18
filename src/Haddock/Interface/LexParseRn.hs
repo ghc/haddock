@@ -96,23 +96,24 @@ processModuleHeader dflags gre safety mayStr = do
 
 
 rename :: DynFlags -> GlobalRdrEnv -> Doc RdrName -> Doc Name
-rename dflags gre = rn
+rename dflags env = rn
   where
     rn d = case d of
       DocAppend a b -> DocAppend (rn a) (rn b)
       DocParagraph doc -> DocParagraph (rn doc)
       DocIdentifier x -> do
         let choices = dataTcOccs' x
-        let names = concatMap (\c -> map gre_name (lookupGRE_RdrName c gre)) choices
-        case names of
+        let gres = concatMap (\c -> lookupGRE_RdrName c env) choices
+        case gres of
           [] ->
             case choices of
               [] -> DocMonospaced (DocString (showPpr dflags x))
-              [a] -> outOfScope dflags a
-              a:b:_ | isRdrTc a -> outOfScope dflags a
-                    | otherwise -> outOfScope dflags b
-          [a] -> DocIdentifier a
-          a:b:_ | isTyConName a -> DocIdentifier a | otherwise -> DocIdentifier b
+              [a] -> outOfScope a
+              a:b:_ | isRdrTc a -> outOfScope a
+                    | otherwise -> outOfScope b
+          [a] -> greIdentifier a
+          a:b:_ | isTyConName (gre_name a) -> greIdentifier a
+                | otherwise                -> greIdentifier b
               -- If an id can refer to multiple things, we give precedence to type
               -- constructors.
 
@@ -135,6 +136,23 @@ rename dflags gre = rn
       DocString str -> DocString str
       DocHeader (Header l t) -> DocHeader $ Header l (rn t)
 
+    -- Render fields compiled with -XOverloadedRecordFields in
+    -- monospace, because the name is an internal representation
+    -- rather than the field label.
+    greIdentifier gre = case gre_par gre of
+        FldParent { par_lbl = Just lbl } -> monospaced lbl
+        _                                -> DocIdentifier (gre_name gre)
+
+    outOfScope :: RdrName -> Doc a
+    outOfScope x =
+      case x of
+        Unqual occ -> monospaced occ
+        Qual mdl occ -> DocIdentifierUnchecked (mdl, occ)
+        Orig _ occ -> monospaced occ
+        Exact name -> monospaced name  -- Shouldn't happen since x is out of scope
+
+    monospaced a = DocMonospaced (DocString (showPpr dflags a))
+
 dataTcOccs' :: RdrName -> [RdrName]
 -- If the input is a data constructor, return both it and a type
 -- constructor.  This is useful when we aren't sure which we are
@@ -148,14 +166,3 @@ dataTcOccs' rdr_name
   where
     occ = rdrNameOcc rdr_name
     rdr_name_tc = setRdrNameSpace rdr_name tcName
-
-
-outOfScope :: DynFlags -> RdrName -> Doc a
-outOfScope dflags x =
-  case x of
-    Unqual occ -> monospaced occ
-    Qual mdl occ -> DocIdentifierUnchecked (mdl, occ)
-    Orig _ occ -> monospaced occ
-    Exact name -> monospaced name  -- Shouldn't happen since x is out of scope
-  where
-    monospaced a = DocMonospaced (DocString (showPpr dflags a))

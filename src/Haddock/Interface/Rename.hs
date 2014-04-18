@@ -389,11 +389,11 @@ renameCon decl@(ConDecl { con_name = lname, con_qvars = ltyvars
 
 
 renameConDeclFieldField :: ConDeclField Name -> RnM (ConDeclField DocName)
-renameConDeclFieldField (ConDeclField name t doc) = do
-  name' <- renameL name
+renameConDeclFieldField (ConDeclField name sel t doc) = do
+  sel' <- rename sel
   t'   <- renameLType t
   doc' <- mapM renameLDocHsSyn doc
-  return (ConDeclField name' t' doc')
+  return (ConDeclField name sel' t' doc')
 
 
 renameSig :: Sig Name -> RnM (Sig DocName)
@@ -469,7 +469,8 @@ renameDataFamInstD (DataFamInstDecl { dfid_tycon = tc, dfid_pats = pats_w_bndrs,
   = do { tc' <- renameL tc
        ; pats' <- mapM renameLType (hswb_cts pats_w_bndrs)
        ; defn' <- renameDataDefn defn
-       ; return (DataFamInstDecl { dfid_tycon = tc', dfid_pats = pats_w_bndrs { hswb_cts = pats' }
+       ; return (DataFamInstDecl { dfid_tycon = tc', dfid_rep_tycon = placeHolderRepTyCon
+                                 , dfid_pats = pats_w_bndrs { hswb_cts = pats' }
                                  , dfid_defn = defn', dfid_fvs = placeHolderNames }) }
 
 renameExportItem :: ExportItem Name -> RnM (ExportItem DocName)

@@ -188,7 +188,7 @@ ppCtor dflags dat subdocs con = lookupCon dflags subdocs (con_name con)
         f (InfixCon a1 a2) = f $ PrefixCon [a1,a2]
         f (RecCon recs) = f (PrefixCon $ map cd_fld_type recs) ++ concat
                           [lookupCon dflags subdocs (cd_fld_name r) ++
-                           [out dflags (unL $ cd_fld_name r) `typeSig` [resType, cd_fld_type r]]
+                           [out dflags (unL $ cd_fld_lbl r) `typeSig` [resType, cd_fld_type r]]
                           | r <- recs]
 
         funs = foldr1 (\x y -> reL $ HsFunTy (makeExplicitL x) (makeExplicitL y))

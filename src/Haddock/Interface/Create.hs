@@ -61,7 +61,7 @@ createInterface tm flags modMap instIfaceMap = do
       dflags         = ms_hspp_opts ms
       !instances     = modInfoInstances mi
       !fam_instances = md_fam_insts md
-      !exportedNames = modInfoExports mi
+      !exportedNames = modInfoExportsWithSelectors mi
 
       (TcGblEnv {tcg_rdr_env = gre, tcg_warns = warnings}, md) = tm_internals_ tm
 
@@ -122,6 +122,12 @@ createInterface tm flags modMap instIfaceMap = do
   let !aliases =
         mkAliasMap dflags $ tm_renamed_source tm
 
+  let !fieldMap = M.fromList [ (gre_name gr_elt, (fromJust $ par_lbl par, par_is par))
+                             | gr_elts <- occEnvElts gre
+                             , gr_elt <- gr_elts
+                             , isOverloadedRecFldGRE gr_elt
+                             , let par = gre_par gr_elt ]
+
   modWarn <- liftErrMsg $ moduleWarning dflags gre warnings
 
   return $! Interface {
@@ -147,6 +153,7 @@ createInterface tm flags modMap instIfaceMap = do
   , ifaceFamInstances    = fam_instances
   , ifaceHaddockCoverage = coverage
   , ifaceWarningMap      = warningMap
+  , ifaceFieldMap        = fieldMap
   }
 
 mkAliasMap :: DynFlags -> Maybe RenamedSource -> M.Map Module ModuleName
@@ -333,9 +340,9 @@ subordinates instMap decl = case decl of
         cons = map unL $ (dd_cons dd)
         constrs = [ (unL $ con_name c, maybeToList $ fmap unL $ con_doc c, M.empty)
                   | c <- cons ]
-        fields  = [ (unL n, maybeToList $ fmap unL doc, M.empty)
+        fields  = [ (cd_fld_sel fld, maybeToList $ fmap unL $ cd_fld_doc fld, M.empty)
                   | RecCon flds <- map con_details cons
-                  , ConDeclField n _ doc <- flds ]
+                  , fld <- flds ]
 
 -- | Extract function argument docs from inside types.
 typeDocs :: HsDecl Name -> Map Int HsDocString
@@ -496,7 +503,7 @@ mkExportItems
     lookupExport (IEVar x)             = declWith x
     lookupExport (IEThingAbs t)        = declWith t
     lookupExport (IEThingAll t)        = declWith t
-    lookupExport (IEThingWith t _)     = declWith t
+    lookupExport (IEThingWith t _ _)   = declWith t
     lookupExport (IEModuleContents m)  =
       moduleExports thisMod m dflags warnings gre exportedNames decls modMap instIfaceMap maps fixMap splices
     lookupExport (IEGroup lev docStr)  = liftErrMsg $
@@ -785,7 +792,7 @@ extractDecl name mdl decl
       InstD (ClsInstD ClsInstDecl { cid_datafam_insts = insts }) ->
         let matches = [ d | L _ d <- insts
                           , L _ ConDecl { con_details = RecCon rec } <- dd_cons (dfid_defn d)
-                          , ConDeclField { cd_fld_name = L _ n } <- rec
+                          , ConDeclField { cd_fld_sel = n } <- rec
                           , n == name
                       ]
         in case matches of
@@ -817,11 +824,12 @@ extractRecSel _ _ _ _ [] = error "extractRecSel: selector not found"
 
 extractRecSel nm mdl t tvs (L _ con : rest) =
   case con_details con of
-    RecCon fields | (ConDeclField n ty _ : _) <- matching_fields fields ->
-      L (getLoc n) (TypeSig [noLoc nm] (noLoc (HsFunTy data_ty (getBangType ty))))
+    RecCon fields | (fld : _) <- matching_fields fields ->
+      L (getLoc (cd_fld_lbl fld)) (TypeSig [noLoc nm]
+                                      (noLoc (HsFunTy data_ty (getBangType (cd_fld_type fld)))))
     _ -> extractRecSel nm mdl t tvs rest
  where
-  matching_fields flds = [ f | f@(ConDeclField n _ _) <- flds, unLoc n == nm ]
+  matching_fields flds = [ fld | fld <- flds, cd_fld_sel fld == nm ]
   data_ty
     | ResTyGADT ty <- con_res con = ty
     | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar t)) tvs

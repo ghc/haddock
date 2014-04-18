@@ -23,6 +23,7 @@ import TypeRep
 import Type(isStrLitTy)
 import Kind ( splitKindFunTys, synTyConResKind, isKind )
 import Name
+import RdrName
 import Var
 import Class
 import TyCon
@@ -255,7 +256,10 @@ synifyDataCon use_gadt_syntax dc = noLoc $
           )
           arg_tys (dataConStrictMarks dc)
   field_tys = zipWith (\field synTy -> ConDeclField
-                                           (synifyName field) synTy Nothing)
+                          { cd_fld_lbl = noLoc (mkVarUnqual (flLabel field))
+                          , cd_fld_sel = flSelector field
+                          , cd_fld_type = synTy
+                          , cd_fld_doc = Nothing })
                 (dataConFieldLabels dc) linear_tys
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> error "synifyDataCon: contradiction!"
