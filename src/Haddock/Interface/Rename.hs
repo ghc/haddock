@@ -179,6 +179,8 @@ renameLKind = renameLType
 renameMaybeLKind :: Maybe (LHsKind Name) -> RnM (Maybe (LHsKind DocName))
 renameMaybeLKind = traverse renameLKind
 
+type instance PostTc DocName Kind  = ()
+
 renameType :: HsType Name -> RnM (HsType DocName)
 renameType t = case t of
   HsForAllTy expl tyvars lcontext ltype -> do
