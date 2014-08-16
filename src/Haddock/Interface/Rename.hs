@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 ----------------------------------------------------------------------------
 -- |
 -- Module      :  Haddock.Interface.Rename
@@ -20,6 +21,7 @@ import Haddock.Types
 import Bag (emptyBag)
 import GHC hiding (NoLink)
 import Name
+import NameSet
 
 import Control.Applicative
 import Control.Monad hiding (mapM)
@@ -453,6 +455,7 @@ renameClsInstD (ClsInstDecl { cid_overlap_mode = omode
                       , cid_sigs = []
                       , cid_tyfam_insts = lATs', cid_datafam_insts = lADTs' })
 
+type instance PostRn DocName NameSet  = NameSet
 
 renameTyFamInstD :: TyFamInstDecl Name -> RnM (TyFamInstDecl DocName)
 renameTyFamInstD (TyFamInstDecl { tfid_eqn = eqn })
