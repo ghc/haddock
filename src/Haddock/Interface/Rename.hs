@@ -179,7 +179,7 @@ renameLKind = renameLType
 renameMaybeLKind :: Maybe (LHsKind Name) -> RnM (Maybe (LHsKind DocName))
 renameMaybeLKind = traverse renameLKind
 
-type instance PostTc DocName Kind  = ()
+type instance PostTc DocName Kind  = PlaceHolder
 
 renameType :: HsType Name -> RnM (HsType DocName)
 renameType t = case t of
