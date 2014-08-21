@@ -22,6 +22,7 @@ import Bag (emptyBag)
 import GHC hiding (NoLink)
 import Name
 import NameSet
+import Coercion
 
 import Control.Applicative
 import Control.Monad hiding (mapM)
@@ -180,6 +181,7 @@ renameMaybeLKind :: Maybe (LHsKind Name) -> RnM (Maybe (LHsKind DocName))
 renameMaybeLKind = traverse renameLKind
 
 type instance PostTc DocName Kind  = PlaceHolder
+type instance PostTc DocName Coercion  = PlaceHolder
 
 renameType :: HsType Name -> RnM (HsType DocName)
 renameType t = case t of
