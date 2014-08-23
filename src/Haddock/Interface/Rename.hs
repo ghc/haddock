@@ -180,8 +180,6 @@ renameLKind = renameLType
 renameMaybeLKind :: Maybe (LHsKind Name) -> RnM (Maybe (LHsKind DocName))
 renameMaybeLKind = traverse renameLKind
 
-type instance PostTc DocName Kind  = PlaceHolder
-type instance PostTc DocName Coercion  = PlaceHolder
 
 renameType :: HsType Name -> RnM (HsType DocName)
 renameType t = case t of
@@ -459,7 +457,15 @@ renameClsInstD (ClsInstDecl { cid_overlap_mode = omode
                       , cid_sigs = []
                       , cid_tyfam_insts = lATs', cid_datafam_insts = lADTs' })
 
+
 type instance PostRn DocName NameSet  = PlaceHolder
+type instance PostRn DocName Fixity   = PlaceHolder
+type instance PostRn DocName Bool     = PlaceHolder
+type instance PostRn DocName [Name]   = PlaceHolder
+
+type instance PostTc DocName Kind     = PlaceHolder
+type instance PostTc DocName Type     = PlaceHolder
+type instance PostTc DocName Coercion = PlaceHolder
 
 renameTyFamInstD :: TyFamInstDecl Name -> RnM (TyFamInstDecl DocName)
 renameTyFamInstD (TyFamInstDecl { tfid_eqn = eqn })
