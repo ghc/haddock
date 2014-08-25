@@ -458,15 +458,6 @@ renameClsInstD (ClsInstDecl { cid_overlap_mode = omode
                       , cid_tyfam_insts = lATs', cid_datafam_insts = lADTs' })
 
 
-type instance PostRn DocName NameSet  = PlaceHolder
-type instance PostRn DocName Fixity   = PlaceHolder
-type instance PostRn DocName Bool     = PlaceHolder
-type instance PostRn DocName [Name]   = PlaceHolder
-
-type instance PostTc DocName Kind     = PlaceHolder
-type instance PostTc DocName Type     = PlaceHolder
-type instance PostTc DocName Coercion = PlaceHolder
-
 renameTyFamInstD :: TyFamInstDecl Name -> RnM (TyFamInstDecl DocName)
 renameTyFamInstD (TyFamInstDecl { tfid_eqn = eqn })
   = do { eqn' <- renameLTyFamInstEqn eqn
@@ -479,7 +470,7 @@ renameLTyFamInstEqn (L loc (TyFamEqn { tfe_tycon = tc, tfe_pats = pats_w_bndrs, 
        ; pats' <- mapM renameLType (hswb_cts pats_w_bndrs)
        ; rhs' <- renameLType rhs
        ; return (L loc (TyFamEqn { tfe_tycon = tc'
-                                 , tfe_pats = pats_w_bndrs { hswb_cts = pats' }
+                                 , tfe_pats = HsWB pats' PlaceHolder PlaceHolder
                                  , tfe_rhs = rhs' })) }
 
 renameLTyFamDefltEqn :: LTyFamDefltEqn Name -> RnM (LTyFamDefltEqn DocName)
@@ -496,7 +487,9 @@ renameDataFamInstD (DataFamInstDecl { dfid_tycon = tc, dfid_pats = pats_w_bndrs,
   = do { tc' <- renameL tc
        ; pats' <- mapM renameLType (hswb_cts pats_w_bndrs)
        ; defn' <- renameDataDefn defn
-       ; return (DataFamInstDecl { dfid_tycon = tc', dfid_pats = pats_w_bndrs { hswb_cts = pats' }
+       ; return (DataFamInstDecl { dfid_tycon = tc'
+                                 , dfid_pats
+                                       = HsWB pats' PlaceHolder PlaceHolder
                                  , dfid_defn = defn', dfid_fvs = placeHolderNames }) }
 
 renameExportItem :: ExportItem Name -> RnM (ExportItem DocName)
@@ -531,3 +524,12 @@ renameSub (n,doc) = do
   n' <- rename n
   doc' <- renameDocForDecl doc
   return (n', doc')
+
+type instance PostRn DocName NameSet  = PlaceHolder
+type instance PostRn DocName Fixity   = PlaceHolder
+type instance PostRn DocName Bool     = PlaceHolder
+type instance PostRn DocName [Name]   = PlaceHolder
+
+type instance PostTc DocName Kind     = PlaceHolder
+type instance PostTc DocName Type     = PlaceHolder
+type instance PostTc DocName Coercion = PlaceHolder
