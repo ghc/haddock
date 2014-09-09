@@ -75,9 +75,9 @@ tyThingToLHsDecl t = case t of
          , tcdLName = synifyName cl
          , tcdTyVars = synifyTyVars (classTyVars cl)
          , tcdFDs = map (\ (l,r) -> noLoc
-                        (map getName l, map getName r) ) $
+                        (map (noLoc . getName) l, map (noLoc . getName) r) ) $
                          snd $ classTvsFds cl
-         , tcdSigs = noLoc (MinimalSig . fmap noLoc $ classMinimalDef cl) :
+         , tcdSigs = noLoc (MinimalSig mempty . fmap noLoc $ classMinimalDef cl) :
                       map (noLoc . synifyIdSig DeleteTopLevelQuantification)
                         (classMethods cl)
          , tcdMeths = emptyBag --ignore default method definitions, they don't affect signature
@@ -146,7 +146,7 @@ synifyTyCon coax tc
     DataDecl { tcdLName = synifyName tc
              , tcdTyVars =       -- tyConTyVars doesn't work on fun/prim, but we can make them up:
                          let mk_hs_tv realKind fakeTyVar
-                                = noLoc $ KindedTyVar (getName fakeTyVar)
+                                = noLoc $ KindedTyVar (noLoc (getName fakeTyVar))
                                                       (synifyKindSig realKind)
                          in HsQTvs { hsq_kvs = []   -- No kind polymorphism
                                    , hsq_tvs = zipWith mk_hs_tv (fst (splitKindFunTys (tyConKind tc)))
@@ -265,8 +265,8 @@ synifyDataCon use_gadt_syntax dc =
   linear_tys = zipWith (\ty bang ->
             let tySyn = synifyType WithinType ty
                 src_bang = case bang of
-                             HsUnpack {} -> HsUserBang (Just True) True
-                             HsStrict    -> HsUserBang (Just False) True
+                             HsUnpack {} -> HsUserBang Nothing (Just True) True
+                             HsStrict    -> HsUserBang Nothing (Just False) True
                              _           -> bang
             in case src_bang of
                  HsNoBang -> tySyn
@@ -279,7 +279,7 @@ synifyDataCon use_gadt_syntax dc =
                 (dataConFieldLabels dc) linear_tys
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> Left "synifyDataCon: contradiction!"
-          (True,False) -> return $ RecCon field_tys
+          (True,False) -> return $ RecCon (noLoc field_tys)
           (False,False) -> return $ PrefixCon linear_tys
           (False,True) -> case linear_tys of
                            [a,b] -> return $ InfixCon a b
@@ -313,7 +313,7 @@ synifyTyVars ktvs = HsQTvs { hsq_kvs = map tyVarName kvs
     (kvs, tvs) = partition isKindVar ktvs
     synifyTyVar tv
       | isLiftedTypeKind kind = noLoc (UserTyVar name)
-      | otherwise             = noLoc (KindedTyVar name (synifyKindSig kind))
+      | otherwise             = noLoc (KindedTyVar (noLoc name) (synifyKindSig kind))
       where
         kind = tyVarKind tv
         name = getName tv
@@ -384,8 +384,8 @@ synifyType s forallty@(ForAllTy _tv _ty) =
 synifyType _ (LitTy t) = noLoc $ HsTyLit $ synifyTyLit t
 
 synifyTyLit :: TyLit -> HsTyLit
-synifyTyLit (NumTyLit n) = HsNumTy n
-synifyTyLit (StrTyLit s) = HsStrTy s
+synifyTyLit (NumTyLit n) = HsNumTy mempty n
+synifyTyLit (StrTyLit s) = HsStrTy mempty s
 
 synifyKindSig :: Kind -> LHsKind Name
 synifyKindSig k = synifyType WithinType k
