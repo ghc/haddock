@@ -32,7 +32,7 @@ import qualified Data.Map as Map
 import System.Directory
 import System.FilePath
 import Data.Char
-import Control.Monad
+import Control.Monad hiding (empty)
 import Data.Maybe
 import Data.List
 
