@@ -403,9 +403,9 @@ renameConDeclFieldField (ConDeclField name t doc) = do
 renameSig :: Sig Name -> RnM (Sig DocName)
 renameSig sig = case sig of
   TypeSig lnames ltype -> do
-    lnames' <- mapM renameL lnames
+    lnames' <- mapM renameL $ fromCL lnames
     ltype' <- renameLType ltype
-    return (TypeSig lnames' ltype')
+    return (TypeSig (toCL lnames') ltype')
   PatSynSig lname args ltype lreq lprov -> do
     lname' <- renameL lname
     args' <- case args of

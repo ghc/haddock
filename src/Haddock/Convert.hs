@@ -90,7 +90,7 @@ tyThingToLHsDecl t = noLoc $ case t of
   ACoAxiom ax -> synifyAxiom ax
 
   -- a data-constructor alone just gets rendered as a function:
-  AConLike (RealDataCon dc) -> SigD (TypeSig [synifyName dc]
+  AConLike (RealDataCon dc) -> SigD (TypeSig (unitCL (synifyName dc))
     (synifyType ImplicitizeForAll (dataConUserType dc)))
 
   AConLike (PatSynCon ps) ->
@@ -278,7 +278,7 @@ synifyName = noLoc . getName
 
 
 synifyIdSig :: SynifyTypeState -> Id -> Sig Name
-synifyIdSig s i = TypeSig [synifyName i] (synifyType s (varType i))
+synifyIdSig s i = TypeSig (unitCL (synifyName i)) (synifyType s (varType i))
 
 
 synifyCtx :: [PredType] -> LHsContext Name

@@ -711,8 +711,8 @@ fullModuleContents dflags warnings gre (docMap, argMap, subMap, declMap, instMap
     expandSig = foldr f []
       where
         f :: LHsDecl name -> [LHsDecl name] -> [LHsDecl name]
-        f (L l (SigD (TypeSig    names t)))          xs = foldr (\n acc -> L l (SigD (TypeSig    [n] t))          : acc) xs names
-        f (L l (SigD (GenericSig names t)))          xs = foldr (\n acc -> L l (SigD (GenericSig [n] t))          : acc) xs names
+        f (L l (SigD (TypeSig    names t)))          xs = foldr (\n acc -> L l (SigD (TypeSig    (unitCL n) t))          : acc) xs  $ fromCL names
+        f (L l (SigD (GenericSig names t)))          xs = foldr (\n acc -> L l (SigD (GenericSig (unitCL n) t))          : acc) xs $ fromCL names
         f x xs = x : xs
 
     mkExportItem :: LHsDecl Name -> ErrMsgGhc (Maybe (ExportItem Name))
@@ -805,7 +805,7 @@ extractRecSel _ _ _ _ [] = error "extractRecSel: selector not found"
 extractRecSel nm mdl t tvs (L _ con : rest) =
   case con_details con of
     RecCon fields | (ConDeclField n ty _ : _) <- matching_fields fields ->
-      L (getLoc n) (TypeSig [noLoc nm] (noLoc (HsFunTy data_ty (getBangType ty))))
+      L (getLoc n) (TypeSig (unitCL (noLoc nm)) (noLoc (HsFunTy data_ty (getBangType ty))))
     _ -> extractRecSel nm mdl t tvs rest
  where
   matching_fields flds = [ f | f@(ConDeclField n _ _) <- flds, unLoc n == nm ]

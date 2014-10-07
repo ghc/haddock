@@ -56,10 +56,11 @@ ppDecl summ links (L loc decl) (mbDoc, fnArgsDoc) instances fixities subdocs spl
 
 
 ppLFunSig :: Bool -> LinksInfo -> SrcSpan -> DocForDecl DocName ->
-             [Located DocName] -> LHsType DocName -> [(DocName, Fixity)] ->
+             HsCommaList (Located DocName) -> LHsType DocName ->
+             [(DocName, Fixity)] ->
              Splice -> Unicode -> Qualification -> Html
 ppLFunSig summary links loc doc lnames lty fixities splice unicode qual =
-  ppFunSig summary links loc doc (map unLoc lnames) (unLoc lty) fixities
+  ppFunSig summary links loc doc (map unLoc $ fromCL lnames) (unLoc lty) fixities
            splice unicode qual
 
 ppFunSig :: Bool -> LinksInfo -> SrcSpan -> DocForDecl DocName ->
@@ -418,7 +419,7 @@ ppShortClassDecl summary links (ClassDecl { tcdCtxt = lctxt, tcdLName = lname, t
             [ ppFunSig summary links loc doc names typ [] splice unicode qual
               | L _ (TypeSig lnames (L _ typ)) <- sigs
               , let doc = lookupAnySubdoc (head names) subdocs
-                    names = map unLoc lnames ]
+                    names = map unLoc $ fromCL lnames ]
               -- FIXME: is taking just the first name ok? Is it possible that
               -- there are different subdocs for different names in a single
               -- type signature?
@@ -466,7 +467,7 @@ ppClassDecl summary links instances fixities loc d subdocs
                                  subfixs = [ f | n <- names
                                                , f@(n',_) <- fixities
                                                , n == n' ]
-                                 names = map unLoc lnames ]
+                                 names = map unLoc $ fromCL lnames ]
                            -- FIXME: is taking just the first name ok? Is it possible that
                            -- there are different subdocs for different names in a single
                            -- type signature?
@@ -474,12 +475,12 @@ ppClassDecl summary links instances fixities loc d subdocs
     minimalBit = case [ s | L _ (MinimalSig s) <- lsigs ] of
       -- Miminal complete definition = every shown method
       And xs : _ | sort [getName n | Var (L _ n) <- xs] ==
-                   sort [getName n | L _ (TypeSig ns _) <- lsigs, L _ n <- ns]
+                   sort [getName n | L _ (TypeSig ns _) <- lsigs, L _ n <- fromCL ns]
         -> noHtml
 
       -- Minimal complete definition = the only shown method
       Var (L _ n) : _ | [getName n] ==
-                        [getName n' | L _ (TypeSig ns _) <- lsigs, L _ n' <- ns]
+                        [getName n' | L _ (TypeSig ns _) <- lsigs, L _ n' <- fromCL ns]
         -> noHtml
 
       -- Minimal complete definition = nothing
