@@ -156,7 +156,7 @@ synifyTyCon coax tc
         let info = case rhs of
                      OpenSynFamilyTyCon -> OpenTypeFamily
                      ClosedSynFamilyTyCon (CoAxiom { co_ax_branches = branches }) ->
-                       ClosedTypeFamily (brListMap (noLoc . synifyAxBranch tc) branches)
+                       ClosedTypeFamily (toCL $ brListMap (noLoc . synifyAxBranch tc) branches)
                      _ -> error "synifyTyCon: type/data family confusion"
         in FamDecl (FamilyDecl { fdInfo = info
                                , fdLName = synifyName tc
