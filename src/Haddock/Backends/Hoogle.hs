@@ -120,8 +120,8 @@ ppExport dflags ExportDecl { expItemDecl    = L _ decl
         f (TyClD d@DataDecl{})  = ppData dflags d subdocs
         f (TyClD d@SynDecl{})   = ppSynonym dflags d
         f (TyClD d@ClassDecl{}) = ppClass dflags d
-        f (ForD (ForeignImport name typ _ _)) = ppSig dflags $ TypeSig (unitCL name) typ
-        f (ForD (ForeignExport name typ _ _)) = ppSig dflags $ TypeSig (unitCL name) typ
+        f (ForD (ForeignImport name typ _ _)) = ppSig dflags $ TypeSig [name] typ
+        f (ForD (ForeignExport name typ _ _)) = ppSig dflags $ TypeSig [name] typ
         f (SigD sig) = ppSig dflags sig
         f _ = []
 ppExport _ _ = []
@@ -131,7 +131,7 @@ ppSig :: DynFlags -> Sig Name -> [String]
 ppSig dflags (TypeSig names sig)
     = [operator prettyNames ++ " :: " ++ outHsType dflags typ]
     where
-        prettyNames = intercalate ", " $ map (out dflags) $ fromCL names
+        prettyNames = intercalate ", " $ map (out dflags) names
         typ = case unL sig of
                    HsForAllTy Explicit a b c -> HsForAllTy Implicit a b c
                    HsForAllTy Qualified a b c -> HsForAllTy Implicit a b c

@@ -589,7 +589,7 @@ processForMiniSynopsis mdl unicode qual ExportDecl { expItemDecl = L _loc decl0 
         (ClassDecl {}) -> [keyword "class" <+> b]
         _ -> []
     SigD (TypeSig lnames (L _ _)) ->
-      map (ppNameMini Prefix mdl . nameOccName . getName . unLoc) $ fromCL lnames
+      map (ppNameMini Prefix mdl . nameOccName . getName . unLoc) lnames
     _ -> []
 processForMiniSynopsis _ _ qual (ExportGroup lvl _id txt) =
   [groupTag lvl << docToHtml qual txt]

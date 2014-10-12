@@ -213,7 +213,7 @@ processExports (e : es) =
 isSimpleSig :: ExportItem DocName -> Maybe ([DocName], HsType DocName)
 isSimpleSig ExportDecl { expItemDecl = L _ (SigD (TypeSig lnames (L _ t)))
                        , expItemMbDoc = (Documentation Nothing Nothing, argDocs) }
-  | Map.null argDocs = Just (map unLoc $ fromCL lnames, t)
+  | Map.null argDocs = Just (map unLoc lnames, t)
 isSimpleSig _ = Nothing
 
 
@@ -248,7 +248,7 @@ ppDocGroup lev doc = sec lev <> braces doc
 declNames :: LHsDecl DocName -> [DocName]
 declNames (L _ decl) = case decl of
   TyClD d  -> [tcdName d]
-  SigD (TypeSig lnames _) -> map unLoc $ fromCL lnames
+  SigD (TypeSig lnames _) -> map unLoc lnames
   SigD (PatSynSig lname _ _ _ _) -> [unLoc lname]
   ForD (ForeignImport (L _ n) _ _ _) -> [n]
   ForD (ForeignExport (L _ n) _ _ _) -> [n]
@@ -292,7 +292,7 @@ ppDecl (L loc decl) (doc, fnArgsDoc) instances subdocs _fixities = case decl of
 --    | Just _  <- tcdTyPats d    -> ppTyInst False loc doc d unicode
 -- Family instances happen via FamInst now
   TyClD d@(ClassDecl {})         -> ppClassDecl instances loc doc subdocs d unicode
-  SigD (TypeSig lnames (L _ t))  -> ppFunSig loc (doc, fnArgsDoc) (map unLoc $ fromCL lnames) t unicode
+  SigD (TypeSig lnames (L _ t))  -> ppFunSig loc (doc, fnArgsDoc) (map unLoc lnames) t unicode
   SigD (PatSynSig lname args ty prov req) ->
       ppLPatSig loc (doc, fnArgsDoc) lname args ty prov req unicode
   ForD d                         -> ppFor loc (doc, fnArgsDoc) d unicode
@@ -526,7 +526,7 @@ ppClassDecl instances loc doc subdocs
       vcat  [ ppFunSig loc doc names typ unicode
             | L _ (TypeSig lnames (L _ typ)) <- lsigs
             , let doc = lookupAnySubdoc (head names) subdocs
-                  names = map unLoc $ fromCL lnames ]
+                  names = map unLoc lnames ]
               -- FIXME: is taking just the first name ok? Is it possible that
               -- there are different subdocs for different names in a single
               -- type signature?

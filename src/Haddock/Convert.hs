@@ -90,7 +90,7 @@ tyThingToLHsDecl t = noLoc $ case t of
   ACoAxiom ax -> synifyAxiom ax
 
   -- a data-constructor alone just gets rendered as a function:
-  AConLike (RealDataCon dc) -> SigD (TypeSig (unitCL (synifyName dc))
+  AConLike (RealDataCon dc) -> SigD (TypeSig [synifyName dc]
     (synifyType ImplicitizeForAll (dataConUserType dc)))
 
   AConLike (PatSynCon ps) ->
@@ -140,8 +140,9 @@ synifyTyCon coax tc
                                                                 alphaTyVars --a, b, c... which are unfortunately all kind *
                                    }
                             
-           , tcdDataDefn = HsDataDefn { dd_ND = DataType  -- arbitrary lie, they are neither 
-                                                    -- algebraic data nor newtype:
+           , tcdDataDefn = HsDataDefn { dd_ND = DataType
+                                              -- arbitrary lie, they are neither 
+                                              -- algebraic data nor newtype:
                                       , dd_ctxt = noLoc []
                                       , dd_cType = Nothing
                                       , dd_kindSig = Just (synifyKindSig (tyConKind tc))
@@ -156,7 +157,7 @@ synifyTyCon coax tc
         let info = case rhs of
                      OpenSynFamilyTyCon -> OpenTypeFamily
                      ClosedSynFamilyTyCon (CoAxiom { co_ax_branches = branches }) ->
-                       ClosedTypeFamily (toCL $ brListMap (noLoc . synifyAxBranch tc) branches)
+                       ClosedTypeFamily (brListMap (noLoc . synifyAxBranch tc) branches)
                      _ -> error "synifyTyCon: type/data family confusion"
         in FamDecl (FamilyDecl { fdInfo = info
                                , fdLName = synifyName tc
@@ -278,7 +279,7 @@ synifyName = noLoc . getName
 
 
 synifyIdSig :: SynifyTypeState -> Id -> Sig Name
-synifyIdSig s i = TypeSig (unitCL (synifyName i)) (synifyType s (varType i))
+synifyIdSig s i = TypeSig [synifyName i] (synifyType s (varType i))
 
 
 synifyCtx :: [PredType] -> LHsContext Name

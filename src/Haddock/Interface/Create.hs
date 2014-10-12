@@ -711,8 +711,8 @@ fullModuleContents dflags warnings gre (docMap, argMap, subMap, declMap, instMap
     expandSig = foldr f []
       where
         f :: LHsDecl name -> [LHsDecl name] -> [LHsDecl name]
-        f (L l (SigD (TypeSig    names t)))          xs = foldr (\n acc -> L l (SigD (TypeSig    (unitCL n) t))          : acc) xs names
-        f (L l (SigD (GenericSig names t)))          xs = foldr (\n acc -> L l (SigD (GenericSig (unitCL n) t))          : acc) xs names
+        f (L l (SigD (TypeSig    names t)))          xs = foldr (\n acc -> L l (SigD (TypeSig    [n] t))          : acc) xs names
+        f (L l (SigD (GenericSig names t)))          xs = foldr (\n acc -> L l (SigD (GenericSig [n] t))          : acc) xs names
         f x xs = x : xs
 
     mkExportItem :: LHsDecl Name -> ErrMsgGhc (Maybe (ExportItem Name))
@@ -764,14 +764,16 @@ extractDecl name mdl decl
           _ -> error "internal: extractDecl (ClassDecl)"
       TyClD d@DataDecl {} ->
         let (n, tyvar_names) = (tcdName d, map toTypeNoLoc $ getTyVars d)
-        in SigD <$> extractRecSel name mdl n tyvar_names (dd_cons (tcdDataDefn d))
+        in SigD <$> extractRecSel name mdl n tyvar_names
+                                  (dd_cons (tcdDataDefn d))
       InstD (DataFamInstD DataFamInstDecl { dfid_tycon = L _ n
                                           , dfid_pats = HsWB { hswb_cts = tys }
                                           , dfid_defn = defn }) ->
         SigD <$> extractRecSel name mdl n tys (dd_cons defn)
       InstD (ClsInstD ClsInstDecl { cid_datafam_insts = insts }) ->
         let matches = [ d | L _ d <- insts
-                          , L _ ConDecl { con_details = RecCon rec } <- dd_cons (dfid_defn d)
+                          , L _ ConDecl { con_details = RecCon rec } <-
+                                                dd_cons (dfid_defn d)
                           , ConDeclField { cd_fld_name = L _ n } <- rec
                           , n == name
                       ]
@@ -805,7 +807,7 @@ extractRecSel _ _ _ _ [] = error "extractRecSel: selector not found"
 extractRecSel nm mdl t tvs (L _ con : rest) =
   case con_details con of
     RecCon fields | (ConDeclField n ty _ : _) <- matching_fields fields ->
-      L (getLoc n) (TypeSig (unitCL (noLoc nm)) (noLoc (HsFunTy data_ty (getBangType ty))))
+      L (getLoc n) (TypeSig [noLoc nm] (noLoc (HsFunTy data_ty (getBangType ty))))
     _ -> extractRecSel nm mdl t tvs rest
  where
   matching_fields flds = [ f | f@(ConDeclField n _ _) <- flds, unLoc n == nm ]

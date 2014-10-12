@@ -317,7 +317,8 @@ renameTyClD d = case d of
     lname'    <- renameL lname
     tyvars'   <- renameLTyVarBndrs tyvars
     defn'     <- renameDataDefn defn
-    return (DataDecl { tcdLName = lname', tcdTyVars = tyvars', tcdDataDefn = defn', tcdFVs = placeHolderNames })
+    return (DataDecl { tcdLName = lname', tcdTyVars = tyvars'
+                     , tcdDataDefn = defn', tcdFVs = placeHolderNames })
 
   ClassDecl { tcdCtxt = lcontext, tcdLName = lname, tcdTyVars = ltyvars
             , tcdFDs = lfundeps, tcdSigs = lsigs, tcdATs = ats, tcdATDefs = at_defs } -> do
@@ -490,7 +491,8 @@ renameDataFamInstD (DataFamInstDecl { dfid_tycon = tc, dfid_pats = pats_w_bndrs,
        ; return (DataFamInstDecl { dfid_tycon = tc'
                                  , dfid_pats
                                        = HsWB pats' PlaceHolder PlaceHolder
-                                 , dfid_defn = defn', dfid_fvs = placeHolderNames }) }
+                                 , dfid_defn = defn'
+                                 , dfid_fvs = placeHolderNames }) }
 
 renameExportItem :: ExportItem Name -> RnM (ExportItem DocName)
 renameExportItem item = case item of
