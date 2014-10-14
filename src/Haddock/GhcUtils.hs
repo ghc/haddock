@@ -217,7 +217,7 @@ instance Parent (ConDecl Name) where
 
 instance Parent (TyClDecl Name) where
   children d
-    | isDataDecl  d = map (unL . con_name . unL) . dd_cons . tcdDataDefn $ d
+    | isDataDecl  d = map (unL . con_name . unL) . concatMap unLoc . dd_cons . tcdDataDefn $ d
     | isClassDecl d =
         map (unL . fdLName . unL) (tcdATs d) ++
         [ unL n | L _ (TypeSig ns _) <- tcdSigs d, n <- ns ]
@@ -233,7 +233,7 @@ family = getName &&& children
 -- child to its grand-children, recursively.
 families :: TyClDecl Name -> [(Name, [Name])]
 families d
-  | isDataDecl  d = family d : map (family . unL) (dd_cons (tcdDataDefn d))
+  | isDataDecl  d = family d : map (family . unL) (concatMap unLoc $ dd_cons (tcdDataDefn d))
   | isClassDecl d = [family d]
   | otherwise     = []
 

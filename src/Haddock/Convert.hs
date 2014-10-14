@@ -215,7 +215,7 @@ synifyTyCon coax tc
                     , dd_ctxt    = alg_ctx
                     , dd_cType   = Nothing
                     , dd_kindSig = fmap synifyKindSig kindSig
-                    , dd_cons    = cons 
+                    , dd_cons    = [ noLoc cons ]
                     , dd_derivs  = alg_deriv }
  in DataDecl { tcdLName = name, tcdTyVars = tyvars, tcdDataDefn = defn
              , tcdFVs = placeHolderNamesTc }

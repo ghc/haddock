@@ -327,7 +327,7 @@ subordinates instMap decl = case decl of
                    ]
     dataSubs dd = constrs ++ fields
       where
-        cons = map unL $ (dd_cons dd)
+        cons = map unL $ (concatMap unLoc $ dd_cons dd)
         constrs = [ (unL $ con_name c, maybeToList $ fmap unL $ con_doc c, M.empty)
                   | c <- cons ]
         fields  = [ (unL n, maybeToList $ fmap unL doc, M.empty)
@@ -765,15 +765,15 @@ extractDecl name mdl decl
       TyClD d@DataDecl {} ->
         let (n, tyvar_names) = (tcdName d, map toTypeNoLoc $ getTyVars d)
         in SigD <$> extractRecSel name mdl n tyvar_names
-                                  (dd_cons (tcdDataDefn d))
+                                  (concatMap unLoc $ dd_cons (tcdDataDefn d))
       InstD (DataFamInstD DataFamInstDecl { dfid_tycon = L _ n
                                           , dfid_pats = HsWB { hswb_cts = tys }
                                           , dfid_defn = defn }) ->
-        SigD <$> extractRecSel name mdl n tys (dd_cons defn)
+        SigD <$> extractRecSel name mdl n tys (concatMap unLoc $ dd_cons defn)
       InstD (ClsInstD ClsInstDecl { cid_datafam_insts = insts }) ->
         let matches = [ d | L _ d <- insts
                           , L _ ConDecl { con_details = RecCon rec } <-
-                                                dd_cons (dfid_defn d)
+                                                concatMap unLoc $ dd_cons (dfid_defn d)
                           , ConDeclField { cd_fld_name = L _ n } <- rec
                           , n == name
                       ]

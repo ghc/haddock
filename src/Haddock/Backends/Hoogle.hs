@@ -165,7 +165,7 @@ ppSynonym dflags x = [out dflags x]
 ppData :: DynFlags -> TyClDecl Name -> [(Name, DocForDecl Name)] -> [String]
 ppData dflags decl@(DataDecl { tcdDataDefn = defn }) subdocs
     = showData decl{ tcdDataDefn = defn { dd_cons=[],dd_derivs=Nothing }} :
-      concatMap (ppCtor dflags decl subdocs . unL) (dd_cons defn)
+      concatMap (ppCtor dflags decl subdocs . unL) (concatMap unLoc $ dd_cons defn)
     where
 
         -- GHC gives out "data Bar =", we want to delete the equals

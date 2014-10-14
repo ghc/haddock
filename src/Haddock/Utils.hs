@@ -136,11 +136,11 @@ restrictTo names (L loc decl) = L loc $ case decl of
 restrictDataDefn :: [Name] -> HsDataDefn Name -> HsDataDefn Name
 restrictDataDefn names defn@(HsDataDefn { dd_ND = new_or_data, dd_cons = cons })
   | DataType <- new_or_data
-  = defn { dd_cons = restrictCons names cons }
+  = defn { dd_cons = [noLoc $ restrictCons names (concatMap unLoc cons)] }
   | otherwise    -- Newtype
-  = case restrictCons names cons of
+  = case restrictCons names (concatMap unLoc cons) of
       []    -> defn { dd_ND = DataType, dd_cons = [] }
-      [con] -> defn { dd_cons = [con] }
+      [con] -> defn { dd_cons = [noLoc [con]] }
       _ -> error "Should not happen"
 
 restrictCons :: [Name] -> [LConDecl Name] -> [LConDecl Name]

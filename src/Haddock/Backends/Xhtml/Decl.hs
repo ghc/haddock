@@ -547,7 +547,7 @@ ppShortDataDecl summary dataInst dataDecl unicode qual
     doConstr c con = toHtml [c] <+> ppShortConstr summary (unLoc con) unicode qual
     doGADTConstr con = ppShortConstr summary (unLoc con) unicode qual
 
-    cons      = dd_cons (tcdDataDefn dataDecl)
+    cons      = concatMap unLoc $ dd_cons (tcdDataDefn dataDecl)
     resTy     = (con_res . unLoc . head) cons
 
 
@@ -563,7 +563,7 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
 
   where
     docname   = tcdName dataDecl
-    cons      = dd_cons (tcdDataDefn dataDecl)
+    cons      = concatMap unLoc $ dd_cons (tcdDataDefn dataDecl)
     resTy     = (con_res . unLoc . head) cons
 
     header_ = topDeclElem links loc splice [docname] $
