@@ -189,10 +189,10 @@ ppCtor dflags dat subdocs con = lookupCon dflags subdocs (con_name con)
     where
         f (PrefixCon args) = [typeSig name $ args ++ [resType]]
         f (InfixCon a1 a2) = f $ PrefixCon [a1,a2]
-        f (RecCon recs) = f (PrefixCon $ map cd_fld_type recs) ++ concat
+        f (RecCon recs) = f (PrefixCon $ map cd_fld_type (concatMap unLoc recs)) ++ concat
                           [lookupCon dflags subdocs (cd_fld_name r) ++
                            [out dflags (unL $ cd_fld_name r) `typeSig` [resType, cd_fld_type r]]
-                          | r <- recs]
+                          | r <- concatMap unLoc recs]
 
         funs = foldr1 (\x y -> reL $ HsFunTy (makeExplicitL x) (makeExplicitL y))
         apps = foldl1 (\x y -> reL $ HsAppTy x y)

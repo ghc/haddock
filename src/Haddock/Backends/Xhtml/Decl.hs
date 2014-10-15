@@ -625,7 +625,7 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
     InfixCon arg1 arg2 -> (doGADTCon [arg1, arg2] resTy, noHtml, noHtml)
 
   where
-    doRecordFields fields = shortSubDecls dataInst (map (ppShortField summary unicode qual) fields)
+    doRecordFields fields = shortSubDecls dataInst (map (ppShortField summary unicode qual) (concatMap unLoc fields))
     doGADTCon args resTy = ppBinder summary occ <+> dcolon unicode <+> hsep [
                              ppForAll forall_ ltvs lcontext unicode qual,
                              ppLType unicode qual (foldr mkFunTy resTy args) ]
@@ -686,7 +686,7 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
         _ -> []
 
     doRecordFields fields = subFields qual
-      (map (ppSideBySideField subdocs unicode qual) fields)
+      (map (ppSideBySideField subdocs unicode qual) (concatMap unLoc fields))
     doGADTCon :: [LHsType DocName] -> Located (HsType DocName) -> Html
     doGADTCon args resTy = ppBinder False occ <+> dcolon unicode
         <+> hsep [ppForAll forall_ ltvs (con_cxt con) unicode qual,

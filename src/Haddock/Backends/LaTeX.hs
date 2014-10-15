@@ -661,7 +661,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
 
  where
     doRecordFields fields =
-        vcat (map (ppSideBySideField subdocs unicode) fields)
+        vcat (map (ppSideBySideField subdocs unicode) (concatMap unLoc fields))
 
     doGADTCon args resTy = decltt (ppBinder occ <+> dcolon unicode <+> hsep [
                                ppForAll forall ltvs (con_cxt con) unicode,
