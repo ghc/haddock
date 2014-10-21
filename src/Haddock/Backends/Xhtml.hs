@@ -54,6 +54,7 @@ import DynFlags (Language(..))
 import GHC hiding ( NoLink, moduleInfo )
 import Name
 import Module
+import FastString
 
 --------------------------------------------------------------------------------
 -- * Generating HTML documentation
@@ -443,7 +444,7 @@ ppHtmlIndex odir doctitle _maybe_package themes
                  (concatMap getIfaceIndex ifaces)
 
     getIfaceIndex iface =
-      [ (getOccString name
+      [ (unpackFS (lookupFieldMap name (instFieldMap iface))
          , Map.fromList [(name, [(mdl, name `Set.member` visible)])])
          | name <- instExports iface ]
       where

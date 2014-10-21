@@ -37,6 +37,7 @@ import           Text.XHtml hiding     ( name, title, p, quote )
 import GHC
 import GHC.Exts
 import Name
+import RdrName ( rdrNameOcc )
 import BooleanFormula
 
 ppDecl :: Bool -> LinksInfo -> LHsDecl DocName
@@ -707,18 +708,18 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
 
 ppSideBySideField :: [(DocName, DocForDecl DocName)] -> Unicode -> Qualification
                   -> ConDeclField DocName -> SubDecl
-ppSideBySideField subdocs unicode qual (ConDeclField (L _ name) ltype _) =
-  (ppBinder False (nameOccName . getName $ name) <+> dcolon unicode <+> ppLType unicode qual ltype,
+ppSideBySideField subdocs unicode qual (ConDeclField (L _ lbl) sel ltype _) =
+  (ppRecSelBinder False (rdrNameOcc lbl) sel <+> dcolon unicode <+> ppLType unicode qual ltype,
     mbDoc,
     [])
   where
     -- don't use cd_fld_doc for same reason we don't use con_doc above
-    mbDoc = lookup name subdocs >>= combineDocumentation . fst
+    mbDoc = lookup sel subdocs >>= combineDocumentation . fst
 
 
 ppShortField :: Bool -> Unicode -> Qualification -> ConDeclField DocName -> Html
-ppShortField summary unicode qual (ConDeclField (L _ name) ltype _)
-  = ppBinder summary (nameOccName . getName $ name)
+ppShortField summary unicode qual (ConDeclField (L _ lbl) sel ltype _)
+  = ppRecSelBinder summary (rdrNameOcc lbl) sel
     <+> dcolon unicode <+> ppLType unicode qual ltype
 
 
@@ -742,6 +743,14 @@ ppDataHeader summary decl@(DataDecl { tcdDataDefn =
       Just (L _ x) -> dcolon unicode <+> ppKind unicode qual x
 
 ppDataHeader _ _ _ _ = error "ppDataHeader: illegal argument"
+
+-- Used for overloaded record field syntactic sugar
+ppConDeclFields :: Bool -> Qualification -> [ConDeclField DocName] -> Html
+ppConDeclFields u q fields = braces (hsep (punctuate comma (map ppr_fld fields)))
+  where
+    ppr_fld (ConDeclField { cd_fld_lbl = n, cd_fld_type = ty })
+        = ppRdrName (unLoc n) <+> dcolon u <+> ppLType u q ty
+
 
 --------------------------------------------------------------------------------
 -- * Types and contexts
@@ -843,7 +852,7 @@ ppr_mono_ty ctxt_prec (HsIParamTy n ty)   u q =
     maybeParen ctxt_prec pREC_CTX $ ppIPName n <+> dcolon u <+> ppr_mono_lty pREC_TOP ty u q
 ppr_mono_ty _         (HsSpliceTy {})     _ _ = error "ppr_mono_ty HsSpliceTy"
 ppr_mono_ty _         (HsQuasiQuoteTy {}) _ _ = error "ppr_mono_ty HsQuasiQuoteTy"
-ppr_mono_ty _         (HsRecTy {})        _ _ = error "ppr_mono_ty HsRecTy"
+ppr_mono_ty _         (HsRecTy flds)      u q = ppConDeclFields u q flds
 ppr_mono_ty _         (HsCoreTy {})       _ _ = error "ppr_mono_ty HsCoreTy"
 ppr_mono_ty _         (HsExplicitListTy _ tys) u q = quote $ brackets $ hsep $ punctuate comma $ map (ppLType u q) tys
 ppr_mono_ty _         (HsExplicitTupleTy _ tys) u q = quote $ parenList $ map (ppLType u q) tys

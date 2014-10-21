@@ -178,14 +178,6 @@ before :: Located a -> Located a -> Bool
 before = (<) `on` getLoc
 
 
-instance Foldable (GenLocated l) where
-  foldMap f (L _ x) = f x
-
-
-instance Traversable (GenLocated l) where
-  mapM f (L l x) = (return . L l) =<< f x
-  traverse f (L l x) = L l <$> f x
-
 -------------------------------------------------------------------------------
 -- * NamedThing instances
 -------------------------------------------------------------------------------

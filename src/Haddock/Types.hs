@@ -36,6 +36,8 @@ import OccName
 import Outputable
 import Control.Applicative (Applicative(..))
 import Control.Monad (ap)
+import Name
+import FastString
 
 -----------------------------------------------------------------------------
 -- * Convenient synonyms
@@ -126,10 +128,18 @@ data Interface = Interface
 
     -- | Warnings for things defined in this module.
   , ifaceWarningMap :: !WarningMap
+
+    -- | Map from a selector name to its field label and parent tycon.
+  , ifaceFieldMap :: !FieldMap
   }
 
 type WarningMap = DocMap Name
+type FieldMap = Map Name (FastString, Name)
 
+lookupFieldMap :: Name -> FieldMap -> FastString
+lookupFieldMap n flds = case Map.lookup n flds of
+                          Just (lbl, _) -> lbl
+                          Nothing       -> occNameFS (nameOccName n)
 
 -- | A subset of the fields of 'Interface' that we store in the interface
 -- files.
@@ -160,6 +170,9 @@ data InstalledInterface = InstalledInterface
 
   , instSubMap         :: Map Name [Name]
   , instFixMap         :: Map Name Fixity
+
+    -- | Map from a selector name to its field label and parent tycon.
+  , instFieldMap       :: FieldMap
   }
 
 
@@ -175,6 +188,7 @@ toInstalledIface interface = InstalledInterface
   , instOptions        = ifaceOptions        interface
   , instSubMap         = ifaceSubMap         interface
   , instFixMap         = ifaceFixMap         interface
+  , instFieldMap       = ifaceFieldMap       interface
   }
 
 

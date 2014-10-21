@@ -12,7 +12,7 @@
 -----------------------------------------------------------------------------
 module Haddock.Backends.Xhtml.Names (
   ppName, ppDocName, ppLDocName, ppRdrName, ppUncheckedLink,
-  ppBinder, ppBinderInfix, ppBinder',
+  ppBinder, ppBinderInfix, ppRecSelBinder, ppBinder',
   ppModule, ppModuleRef, ppIPName, linkId, Notation(..)
 ) where
 
@@ -115,6 +115,13 @@ ppBinder :: Bool -> OccName -> Html
 ppBinder True n = linkedAnchor (nameAnchorId n) << ppBinder' Prefix n
 ppBinder False n = namedAnchor (nameAnchorId n) ! [theclass "def"]
                         << ppBinder' Prefix n
+
+ppRecSelBinder :: Bool -> OccName -> DocName -> Html
+ppRecSelBinder True  lbl sel = linkedAnchor (nameAnchorId (nameOccName (getName sel)))
+                               << ppBinder' Prefix lbl
+ppRecSelBinder False lbl sel = namedAnchor (nameAnchorId (nameOccName (getName sel)))
+                                   ! [theclass "def"]
+                               << ppBinder' Prefix lbl
 
 ppBinderInfix :: Bool -> OccName -> Html
 ppBinderInfix True n = linkedAnchor (nameAnchorId n) << ppBinder' Infix n

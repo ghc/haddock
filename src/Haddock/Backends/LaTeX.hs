@@ -151,7 +151,7 @@ ppLaTeXModule _title odir iface = do
         verb $ vcat [
            text "module" <+> text mdl_str <+> lparen,
            text "    " <> fsep (punctuate (text ", ") $
-                               map exportListItem $
+                               map (exportListItem (ifaceFieldMap iface)) $
                                filter forSummary exports),
            text "  ) where"
          ],
@@ -176,19 +176,19 @@ string_txt (ZStr s1) s2 = zString s1 ++ s2
 string_txt (LStr s1 _) s2 = unpackLitString s1 ++ s2
 
 
-exportListItem :: ExportItem DocName -> LaTeX
-exportListItem ExportDecl { expItemDecl = decl, expItemSubDocs = subdocs }
+exportListItem :: FieldMap -> ExportItem DocName -> LaTeX
+exportListItem flds ExportDecl { expItemDecl = decl, expItemSubDocs = subdocs }
   = sep (punctuate comma . map ppDocBinder $ declNames decl) <>
      case subdocs of
        [] -> empty
-       _  -> parens (sep (punctuate comma (map (ppDocBinder . fst) subdocs)))
-exportListItem (ExportNoDecl y [])
+       _  -> parens (sep (punctuate comma (map (ppDocSubBinder flds . fst) subdocs)))
+exportListItem _ (ExportNoDecl y [])
   = ppDocBinder y
-exportListItem (ExportNoDecl y subs)
+exportListItem _ (ExportNoDecl y subs)
   = ppDocBinder y <> parens (sep (punctuate comma (map ppDocBinder subs)))
-exportListItem (ExportModule mdl)
+exportListItem _ (ExportModule mdl)
   = text "module" <+> text (moduleString mdl)
-exportListItem _
+exportListItem _ _
   = error "exportListItem"
 
 
@@ -682,12 +682,12 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
 
 
 ppSideBySideField :: [(DocName, DocForDecl DocName)] -> Bool -> ConDeclField DocName ->  LaTeX
-ppSideBySideField subdocs unicode (ConDeclField (L _ name) ltype _) =
-  decltt (ppBinder (nameOccName . getName $ name)
+ppSideBySideField subdocs unicode (ConDeclField (L _ lbl) sel ltype _) =
+  decltt (ppBinder (rdrNameOcc lbl)
     <+> dcolon unicode <+> ppLType unicode ltype) <-> rDoc mbDoc
   where
     -- don't use cd_fld_doc for same reason we don't use con_doc above
-    mbDoc = lookup name subdocs >>= combineDocumentation . fst
+    mbDoc = lookup sel subdocs >>= combineDocumentation . fst
 
 -- {-
 -- ppHsFullConstr :: HsConDecl -> LaTeX
@@ -748,6 +748,15 @@ ppDataHeader (DataDecl { tcdLName = L _ name, tcdTyVars = tyvars
     -- T a b c ..., or a :+: b
     ppAppDocNameNames False name (tyvarNames tyvars)
 ppDataHeader _ _ = error "ppDataHeader: illegal argument"
+
+
+-- Used for overloaded record field syntactic sugar
+ppConDeclFields :: Bool -> [ConDeclField DocName] -> LaTeX
+ppConDeclFields u fields = braces (hsep (punctuate comma (map ppr_fld fields)))
+  where
+    ppr_fld (ConDeclField { cd_fld_lbl = n, cd_fld_type = ty })
+        = ppOccName (rdrNameOcc (unLoc n)) <+> dcolon u <+> ppLType u ty
+
 
 --------------------------------------------------------------------------------
 -- * Type applications
@@ -897,7 +906,7 @@ ppr_mono_ty _         (HsPArrTy ty)       u = pabrackets (ppr_mono_lty pREC_TOP 
 ppr_mono_ty _         (HsIParamTy n ty)   u = brackets (ppIPName n <+> dcolon u <+> ppr_mono_lty pREC_TOP ty u)
 ppr_mono_ty _         (HsSpliceTy {})     _ = error "ppr_mono_ty HsSpliceTy"
 ppr_mono_ty _         (HsQuasiQuoteTy {}) _ = error "ppr_mono_ty HsQuasiQuoteTy"
-ppr_mono_ty _         (HsRecTy {})        _ = error "ppr_mono_ty HsRecTy"
+ppr_mono_ty _         (HsRecTy flds)      u = ppConDeclFields u flds
 ppr_mono_ty _         (HsCoreTy {})       _ = error "ppr_mono_ty HsCoreTy"
 ppr_mono_ty _         (HsExplicitListTy _ tys) u = Pretty.quote $ brackets $ hsep $ punctuate comma $ map (ppLType u) tys
 ppr_mono_ty _         (HsExplicitTupleTy _ tys) u = Pretty.quote $ parenList $ map (ppLType u) tys
@@ -997,9 +1006,11 @@ ppLDocName (L _ d) = ppDocName d
 ppDocBinder :: DocName -> LaTeX
 ppDocBinder = ppBinder . nameOccName . getName
 
+ppDocSubBinder :: FieldMap -> DocName -> LaTeX
+ppDocSubBinder flds d = ppBinder $ mkVarOccFS $ lookupFieldMap (getName d) flds
+
 ppDocBinderInfix :: DocName -> LaTeX
 ppDocBinderInfix = ppBinderInfix . nameOccName . getName
-
 
 ppName :: Name -> LaTeX
 ppName = ppOccName . nameOccName
