@@ -490,7 +490,7 @@ mkExportItems
     Nothing -> fullModuleContents dflags warnings gre maps fixMap splices decls
     Just exports -> liftM concat $ mapM lookupExport exports
   where
-    lookupExport (IEVar x)             = declWith x
+    lookupExport (IEVar (L _ x))       = declWith x
     lookupExport (IEThingAbs t)        = declWith t
     lookupExport (IEThingAll t)        = declWith t
     lookupExport (IEThingWith t _)     = declWith t
