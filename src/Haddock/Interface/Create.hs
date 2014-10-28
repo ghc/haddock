@@ -494,7 +494,7 @@ mkExportItems
     lookupExport (IEThingAbs t)          = declWith t
     lookupExport (IEThingAll (L _ t))    = declWith t
     lookupExport (IEThingWith (L _ t) _) = declWith t
-    lookupExport (IEModuleContents m)  =
+    lookupExport (IEModuleContents (L _ m))  =
       moduleExports thisMod m dflags warnings gre exportedNames decls modMap instIfaceMap maps fixMap splices
     lookupExport (IEGroup lev docStr)  = return $
       return . ExportGroup lev "" $ processDocString dflags gre docStr
