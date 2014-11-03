@@ -594,7 +594,7 @@ ppDataDecl instances subdocs _loc doc dataDecl unicode
 
   where
     cons      = dd_cons (tcdDataDefn dataDecl)
-    resTy     = (con_res . unLoc . head) cons
+    resTy     = (con_res . unLoc . head) (concatMap unLoc cons)
 
     body = catMaybes [constrBit, doc >>= documentationToLaTeX]
 
@@ -608,7 +608,7 @@ ppDataDecl instances subdocs _loc doc dataDecl unicode
       | null cons = Nothing
       | otherwise = Just $
           text "\\haddockbeginconstrs" $$
-          vcat (zipWith (ppSideBySideConstr subdocs unicode) leaders cons) $$
+          vcat (zipWith (ppSideBySideConstr subdocs unicode) leaders (concatMap unLoc cons)) $$
           text "\\end{tabulary}\\par"
 
     instancesBit = ppDocInstances unicode instances
@@ -661,7 +661,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
 
  where
     doRecordFields fields =
-        vcat (map (ppSideBySideField subdocs unicode) fields)
+        vcat (map (ppSideBySideField subdocs unicode) (concatMap unLoc fields))
 
     doGADTCon args resTy = decltt (ppBinder occ <+> dcolon unicode <+> hsep [
                                ppForAll forall ltvs (con_cxt con) unicode,

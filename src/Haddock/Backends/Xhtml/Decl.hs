@@ -548,7 +548,7 @@ ppShortDataDecl summary dataInst dataDecl unicode qual
     doConstr c con = toHtml [c] <+> ppShortConstr summary (unLoc con) unicode qual
     doGADTConstr con = ppShortConstr summary (unLoc con) unicode qual
 
-    cons      = dd_cons (tcdDataDefn dataDecl)
+    cons      = concatMap unLoc $ dd_cons (tcdDataDefn dataDecl)
     resTy     = (con_res . unLoc . head) cons
 
 
@@ -564,7 +564,7 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
 
   where
     docname   = tcdName dataDecl
-    cons      = dd_cons (tcdDataDefn dataDecl)
+    cons      = concatMap unLoc $ dd_cons (tcdDataDefn dataDecl)
     resTy     = (con_res . unLoc . head) cons
 
     header_ = topDeclElem links loc splice [docname] $
@@ -626,7 +626,7 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
     InfixCon arg1 arg2 -> (doGADTCon [arg1, arg2] resTy, noHtml, noHtml)
 
   where
-    doRecordFields fields = shortSubDecls dataInst (map (ppShortField summary unicode qual) fields)
+    doRecordFields fields = shortSubDecls dataInst (map (ppShortField summary unicode qual) (concatMap unLoc fields))
     doGADTCon args resTy = ppBinder summary occ <+> dcolon unicode <+> hsep [
                              ppForAll forall_ ltvs lcontext unicode qual,
                              ppLType unicode qual (foldr mkFunTy resTy args) ]
@@ -687,7 +687,7 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
         _ -> []
 
     doRecordFields fields = subFields qual
-      (map (ppSideBySideField subdocs unicode qual) fields)
+      (map (ppSideBySideField subdocs unicode qual) (concatMap unLoc fields))
     doGADTCon :: [LHsType DocName] -> Located (HsType DocName) -> Html
     doGADTCon args resTy = ppBinder False occ <+> dcolon unicode
         <+> hsep [ppForAll forall_ ltvs (con_cxt con) unicode qual,

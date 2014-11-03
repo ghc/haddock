@@ -230,7 +230,8 @@ renameType t = case t of
   HsTyLit x -> return (HsTyLit x)
 
   HsWrapTy a b            -> HsWrapTy a <$> renameType b
-  HsRecTy a               -> HsRecTy <$> mapM renameConDeclFieldField a
+  HsRecTy a               -> do a' <- mapM renameConDeclFieldField (concatMap unLoc a)
+                                return (HsRecTy [noLoc a'])
   HsCoreTy a              -> pure (HsCoreTy a)
   HsExplicitListTy  a b   -> HsExplicitListTy  a <$> mapM renameLType b
   HsExplicitTupleTy a b   -> HsExplicitTupleTy a <$> mapM renameLType b
@@ -359,10 +360,11 @@ renameDataDefn (HsDataDefn { dd_ND = nd, dd_ctxt = lcontext, dd_cType = cType
                            , dd_kindSig = k, dd_cons = cons }) = do
     lcontext' <- renameLContext lcontext
     k'        <- renameMaybeLKind k
-    cons'     <- mapM (mapM renameCon) cons
+    cons'     <- mapM (mapM renameCon) (concatMap unL cons)
     -- I don't think we need the derivings, so we return Nothing
     return (HsDataDefn { dd_ND = nd, dd_ctxt = lcontext', dd_cType = cType
-                       , dd_kindSig = k', dd_cons = cons', dd_derivs = Nothing })
+                       , dd_kindSig = k', dd_cons = [noLoc cons']
+                       , dd_derivs = Nothing })
 
 renameCon :: ConDecl Name -> RnM (ConDecl DocName)
 renameCon decl@(ConDecl { con_name = lname, con_qvars = ltyvars
@@ -377,7 +379,9 @@ renameCon decl@(ConDecl { con_name = lname, con_qvars = ltyvars
       return (decl { con_name = lname', con_qvars = ltyvars', con_cxt = lcontext'
                    , con_details = details', con_res = restype', con_doc = mbldoc' })
   where
-    renameDetails (RecCon fields) = return . RecCon =<< mapM renameConDeclFieldField fields
+    renameDetails (RecCon fields) = do
+      fields' <- mapM renameConDeclFieldField (concatMap unLoc fields)
+      return (RecCon [noLoc fields'])
     renameDetails (PrefixCon ps) = return . PrefixCon =<< mapM renameLType ps
     renameDetails (InfixCon a b) = do
       a' <- renameLType a

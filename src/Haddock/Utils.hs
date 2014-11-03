@@ -136,11 +136,11 @@ restrictTo names (L loc decl) = L loc $ case decl of
 restrictDataDefn :: [Name] -> HsDataDefn Name -> HsDataDefn Name
 restrictDataDefn names defn@(HsDataDefn { dd_ND = new_or_data, dd_cons = cons })
   | DataType <- new_or_data
-  = defn { dd_cons = restrictCons names cons }
+  = defn { dd_cons = [noLoc (restrictCons names (concatMap unL cons))] }
   | otherwise    -- Newtype
-  = case restrictCons names cons of
+  = case restrictCons names (concatMap unL cons) of
       []    -> defn { dd_ND = DataType, dd_cons = [] }
-      [con] -> defn { dd_cons = [con] }
+      [con] -> defn { dd_cons = [noLoc [con]] }
       _ -> error "Should not happen"
 
 restrictCons :: [Name] -> [LConDecl Name] -> [LConDecl Name]
@@ -150,8 +150,8 @@ restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
       case con_details d of
         PrefixCon _ -> Just d
         RecCon fields
-          | all field_avail fields -> Just d
-          | otherwise -> Just (d { con_details = PrefixCon (field_types fields) })
+          | all field_avail (concatMap unL fields) -> Just d
+          | otherwise -> Just (d { con_details = PrefixCon (field_types (concatMap unL fields)) })
           -- if we have *all* the field names available, then
           -- keep the record declaration.  Otherwise degrade to
           -- a constructor declaration.  This isn't quite right, but
