@@ -634,8 +634,14 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
 
     header_  = ppConstrHdr forall_ tyVars context
     occ        = map (nameOccName . getName . unLoc) $ con_name con
-    ppOcc      = hsep (punctuate comma (map (ppBinder summary) occ))
-    ppOccInfix = hsep (punctuate comma (map (ppBinderInfix summary) occ))
+
+    ppOcc      = case occ of
+      [one] -> ppBinder summary one
+      _     -> hsep (punctuate comma (map (ppBinder summary) occ))
+
+    ppOccInfix = case occ of
+      [one] -> ppBinderInfix summary one
+      _     -> hsep (punctuate comma (map (ppBinderInfix summary) occ))
 
     ltvs     = con_qvars con
     tyVars   = tyvarNames ltvs
@@ -701,8 +707,14 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
     fixity  = ppFixities fixities qual
     header_ = ppConstrHdr forall_ tyVars context unicode qual
     occ        = map (nameOccName . getName . unLoc) $ con_name con
-    ppOcc      = hsep (punctuate comma (map (ppBinder False) occ))
-    ppOccInfix = hsep (punctuate comma (map (ppBinderInfix False) occ))
+
+    ppOcc      = case occ of
+      [one] -> ppBinder False one
+      _     -> hsep (punctuate comma (map (ppBinder False) occ))
+
+    ppOccInfix = case occ of
+      [one] -> ppBinderInfix False one
+      _     -> hsep (punctuate comma (map (ppBinderInfix False) occ))
 
     ltvs    = con_qvars con
     tyVars  = tyvarNames (con_qvars con)

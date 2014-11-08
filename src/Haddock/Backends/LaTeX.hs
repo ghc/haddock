@@ -671,7 +671,9 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
 
     header_ = ppConstrHdr forall tyVars context
     occ     = map (nameOccName . getName . unLoc) $ con_name con
-    ppOcc   = cat (punctuate comma (map ppBinder occ))
+    ppOcc   = case occ of
+      [one] -> ppBinder one
+      _     -> cat (punctuate comma (map ppBinder occ))
     ltvs    = con_qvars con
     tyVars  = tyvarNames (con_qvars con)
     context = unLoc (con_cxt con)
