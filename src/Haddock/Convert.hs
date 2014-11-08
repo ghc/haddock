@@ -214,7 +214,7 @@ synifyTyCon coax tc
                     , dd_ctxt    = alg_ctx
                     , dd_cType   = Nothing
                     , dd_kindSig = fmap synifyKindSig kindSig
-                    , dd_cons    = [noLoc cons]
+                    , dd_cons    = cons
                     , dd_derivs  = alg_deriv }
  in DataDecl { tcdLName = name, tcdTyVars = tyvars, tcdDataDefn = defn
              , tcdFVs = placeHolderNamesTc }
@@ -268,7 +268,7 @@ synifyDataCon use_gadt_syntax dc = noLoc $
               then ResTyGADT (synifyType WithinType res_ty)
               else ResTyH98
  -- finally we get synifyDataCon's result!
- in ConDecl name Implicit{-we don't know nor care-}
+ in ConDecl [name] Implicit{-we don't know nor care-}
       qvars ctx hs_arg_tys hs_res_ty Nothing
       False --we don't want any "deprecated GADT syntax" warnings!
 

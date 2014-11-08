@@ -548,7 +548,7 @@ ppShortDataDecl summary dataInst dataDecl unicode qual
     doConstr c con = toHtml [c] <+> ppShortConstr summary (unLoc con) unicode qual
     doGADTConstr con = ppShortConstr summary (unLoc con) unicode qual
 
-    cons      = concatMap unLoc $ dd_cons (tcdDataDefn dataDecl)
+    cons      = dd_cons (tcdDataDefn dataDecl)
     resTy     = (con_res . unLoc . head) cons
 
 
@@ -564,7 +564,7 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
 
   where
     docname   = tcdName dataDecl
-    cons      = concatMap unLoc $ dd_cons (tcdDataDefn dataDecl)
+    cons      = dd_cons (tcdDataDefn dataDecl)
     resTy     = (con_res . unLoc . head) cons
 
     header_ = topDeclElem links loc splice [docname] $
@@ -581,7 +581,8 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
     constrBit = subConstructors qual
       [ ppSideBySideConstr subdocs subfixs unicode qual c
       | c <- cons
-      , let subfixs = filter (\(n,_) -> n == unLoc (con_name (unLoc c))) fixities
+      -- , let subfixs = filter (\(n,_) -> n == unLoc (con_name (unLoc c))) fixities
+      , let subfixs = filter (\(n,_) -> any (\cn -> cn == n) (map unLoc (con_name (unLoc c)))) fixities
       ]
 
     instancesBit = ppInstances instances docname unicode qual
@@ -600,15 +601,15 @@ ppShortConstrParts :: Bool -> Bool -> ConDecl DocName -> Unicode -> Qualificatio
 ppShortConstrParts summary dataInst con unicode qual = case con_res con of
   ResTyH98 -> case con_details con of
     PrefixCon args ->
-      (header_ unicode qual +++ hsep (ppBinder summary occ
+      (header_ unicode qual +++ hsep (ppOcc
             : map (ppLParendType unicode qual) args), noHtml, noHtml)
     RecCon fields ->
-      (header_ unicode qual +++ ppBinder summary occ <+> char '{',
+      (header_ unicode qual +++ ppOcc <+> char '{',
        doRecordFields fields,
        char '}')
     InfixCon arg1 arg2 ->
       (header_ unicode qual +++ hsep [ppLParendType unicode qual arg1,
-            ppBinderInfix summary occ, ppLParendType unicode qual arg2],
+            ppOccInfix, ppLParendType unicode qual arg2],
        noHtml, noHtml)
 
   ResTyGADT resTy -> case con_details con of
@@ -619,7 +620,7 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
     -- Constr :: (Context) => { field :: a, field2 :: b } -> Ty (a, b)
     -- (except each field gets its own line in docs, to match
     -- non-GADT records)
-    RecCon fields -> (ppBinder summary occ <+> dcolon unicode <+>
+    RecCon fields -> (ppOcc <+> dcolon unicode <+>
                             ppForAll forall_ ltvs lcontext unicode qual <+> char '{',
                             doRecordFields fields,
                             char '}' <+> arrow unicode <+> ppLType unicode qual resTy)
@@ -627,12 +628,15 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
 
   where
     doRecordFields fields = shortSubDecls dataInst (map (ppShortField summary unicode qual) (concatMap unLoc fields))
-    doGADTCon args resTy = ppBinder summary occ <+> dcolon unicode <+> hsep [
+    doGADTCon args resTy = ppOcc <+> dcolon unicode <+> hsep [
                              ppForAll forall_ ltvs lcontext unicode qual,
                              ppLType unicode qual (foldr mkFunTy resTy args) ]
 
     header_  = ppConstrHdr forall_ tyVars context
-    occ      = nameOccName . getName . unLoc . con_name $ con
+    occ        = map (nameOccName . getName . unLoc) $ con_name con
+    ppOcc      = hsep (punctuate comma (map (ppBinder summary) occ))
+    ppOccInfix = hsep (punctuate comma (map (ppBinderInfix summary) occ))
+
     ltvs     = con_qvars con
     tyVars   = tyvarNames ltvs
     lcontext = con_cxt con
@@ -663,15 +667,15 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
     decl = case con_res con of
       ResTyH98 -> case con_details con of
         PrefixCon args ->
-          hsep ((header_ +++ ppBinder False occ)
+          hsep ((header_ +++ ppOcc)
             : map (ppLParendType unicode qual) args)
           <+> fixity
 
-        RecCon _ -> header_ +++ ppBinder False occ <+> fixity
+        RecCon _ -> header_ +++ ppOcc <+> fixity
 
         InfixCon arg1 arg2 ->
           hsep [header_ +++ ppLParendType unicode qual arg1,
-            ppBinderInfix False occ,
+            ppOccInfix,
             ppLParendType unicode qual arg2]
           <+> fixity
 
@@ -689,21 +693,24 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
     doRecordFields fields = subFields qual
       (map (ppSideBySideField subdocs unicode qual) (concatMap unLoc fields))
     doGADTCon :: [LHsType DocName] -> Located (HsType DocName) -> Html
-    doGADTCon args resTy = ppBinder False occ <+> dcolon unicode
+    doGADTCon args resTy = ppOcc <+> dcolon unicode
         <+> hsep [ppForAll forall_ ltvs (con_cxt con) unicode qual,
                   ppLType unicode qual (foldr mkFunTy resTy args) ]
         <+> fixity
 
     fixity  = ppFixities fixities qual
     header_ = ppConstrHdr forall_ tyVars context unicode qual
-    occ     = nameOccName . getName . unLoc . con_name $ con
+    occ        = map (nameOccName . getName . unLoc) $ con_name con
+    ppOcc      = hsep (punctuate comma (map (ppBinder False) occ))
+    ppOccInfix = hsep (punctuate comma (map (ppBinderInfix False) occ))
+
     ltvs    = con_qvars con
     tyVars  = tyvarNames (con_qvars con)
     context = unLoc (con_cxt con)
     forall_ = con_explicit con
     -- don't use "con_doc con", in case it's reconstructed from a .hi file,
     -- or also because we want Haddock to do the doc-parsing, not GHC.
-    mbDoc = lookup (unLoc $ con_name con) subdocs >>= combineDocumentation . fst
+    mbDoc = lookup (unLoc $ head $ con_name con) subdocs >>= combineDocumentation . fst
     mkFunTy a b = noLoc (HsFunTy a b)
 
 

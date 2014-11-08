@@ -194,11 +194,6 @@ instance Traversable (GenLocated l) where
 instance NamedThing (TyClDecl Name) where
   getName = tcdName
 
-
-instance NamedThing (ConDecl Name) where
-  getName = unL . con_name
-
-
 -------------------------------------------------------------------------------
 -- * Subordinates
 -------------------------------------------------------------------------------
@@ -217,7 +212,7 @@ instance Parent (ConDecl Name) where
 
 instance Parent (TyClDecl Name) where
   children d
-    | isDataDecl  d = map (unL . con_name . unL) $ concatMap unL $ (dd_cons . tcdDataDefn) $ d
+    | isDataDecl  d = map unLoc $ concatMap (con_name . unL) $ (dd_cons . tcdDataDefn) $ d
     | isClassDecl d =
         map (unL . fdLName . unL) (tcdATs d) ++
         [ unL n | L _ (TypeSig ns _) <- tcdSigs d, n <- ns ]
@@ -228,12 +223,15 @@ instance Parent (TyClDecl Name) where
 family :: (NamedThing a, Parent a) => a -> (Name, [Name])
 family = getName &&& children
 
+familyConDecl :: ConDecl Name -> [(Name, [Name])]
+familyConDecl d = zip (map unL (con_name d)) (repeat $ children d)
+
 
 -- | A mapping from the parent (main-binder) to its children and from each
 -- child to its grand-children, recursively.
 families :: TyClDecl Name -> [(Name, [Name])]
 families d
-  | isDataDecl  d = family d : map (family . unL) (concatMap unL $ dd_cons (tcdDataDefn d))
+  | isDataDecl  d = family d : concatMap (familyConDecl . unL) (dd_cons (tcdDataDefn d))
   | isClassDecl d = [family d]
   | otherwise     = []
 

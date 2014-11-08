@@ -165,7 +165,7 @@ ppSynonym dflags x = [out dflags x]
 ppData :: DynFlags -> TyClDecl Name -> [(Name, DocForDecl Name)] -> [String]
 ppData dflags decl@(DataDecl { tcdDataDefn = defn }) subdocs
     = showData decl{ tcdDataDefn = defn { dd_cons=[],dd_derivs=Nothing }} :
-      concatMap (ppCtor dflags decl subdocs . unL) (concatMap unLoc $ dd_cons defn)
+      concatMap (ppCtor dflags decl subdocs . unL) (dd_cons defn)
     where
 
         -- GHC gives out "data Bar =", we want to delete the equals
@@ -184,7 +184,7 @@ lookupCon dflags subdocs (L _ name) = case lookup name subdocs of
   _ -> []
 
 ppCtor :: DynFlags -> TyClDecl Name -> [(Name, DocForDecl Name)] -> ConDecl Name -> [String]
-ppCtor dflags dat subdocs con = lookupCon dflags subdocs (con_name con)
+ppCtor dflags dat subdocs con = concatMap (lookupCon dflags subdocs) (con_name con)
                          ++ f (con_details con)
     where
         f (PrefixCon args) = [typeSig name $ args ++ [resType]]
@@ -198,7 +198,7 @@ ppCtor dflags dat subdocs con = lookupCon dflags subdocs (con_name con)
         apps = foldl1 (\x y -> reL $ HsAppTy x y)
 
         typeSig nm flds = operator nm ++ " :: " ++ outHsType dflags (makeExplicit $ unL $ funs flds)
-        name = out dflags $ unL $ con_name con
+        name = out dflags $ map unL $ con_name con
 
         resType = case con_res con of
             ResTyH98 -> apps $ map (reL . HsTyVar) $
