@@ -582,7 +582,8 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
       [ ppSideBySideConstr subdocs subfixs unicode qual c
       | c <- cons
       -- , let subfixs = filter (\(n,_) -> n == unLoc (con_name (unLoc c))) fixities
-      , let subfixs = filter (\(n,_) -> any (\cn -> cn == n) (map unLoc (con_name (unLoc c)))) fixities
+      , let subfixs = filter (\(n,_) -> any (\cn -> cn == n)
+                                     (map unLoc (con_names (unLoc c)))) fixities
       ]
 
     instancesBit = ppInstances instances docname unicode qual
@@ -633,7 +634,7 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
                              ppLType unicode qual (foldr mkFunTy resTy args) ]
 
     header_  = ppConstrHdr forall_ tyVars context
-    occ        = map (nameOccName . getName . unLoc) $ con_name con
+    occ        = map (nameOccName . getName . unLoc) $ con_names con
 
     ppOcc      = case occ of
       [one] -> ppBinder summary one
@@ -706,7 +707,7 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
 
     fixity  = ppFixities fixities qual
     header_ = ppConstrHdr forall_ tyVars context unicode qual
-    occ        = map (nameOccName . getName . unLoc) $ con_name con
+    occ        = map (nameOccName . getName . unLoc) $ con_names con
 
     ppOcc      = case occ of
       [one] -> ppBinder False one
@@ -722,7 +723,8 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
     forall_ = con_explicit con
     -- don't use "con_doc con", in case it's reconstructed from a .hi file,
     -- or also because we want Haddock to do the doc-parsing, not GHC.
-    mbDoc = lookup (unLoc $ head $ con_name con) subdocs >>= combineDocumentation . fst
+    mbDoc = lookup (unLoc $ head $ con_names con) subdocs >>=
+            combineDocumentation . fst
     mkFunTy a b = noLoc (HsFunTy a b)
 
 

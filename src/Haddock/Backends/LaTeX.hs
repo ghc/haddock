@@ -670,7 +670,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
 
 
     header_ = ppConstrHdr forall tyVars context
-    occ     = map (nameOccName . getName . unLoc) $ con_name con
+    occ     = map (nameOccName . getName . unLoc) $ con_names con
     ppOcc   = case occ of
       [one] -> ppBinder one
       _     -> cat (punctuate comma (map ppBinder occ))
@@ -680,7 +680,8 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
     forall  = con_explicit con
     -- don't use "con_doc con", in case it's reconstructed from a .hi file,
     -- or also because we want Haddock to do the doc-parsing, not GHC.
-    mbDoc = lookup (unLoc $ head $ con_name con) subdocs >>= combineDocumentation . fst
+    mbDoc = lookup (unLoc $ head $ con_names con) subdocs >>=
+            combineDocumentation . fst
     mkFunTy a b = noLoc (HsFunTy a b)
 
 

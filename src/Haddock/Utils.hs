@@ -146,7 +146,7 @@ restrictDataDefn names defn@(HsDataDefn { dd_ND = new_or_data, dd_cons = cons })
 restrictCons :: [Name] -> [LConDecl Name] -> [LConDecl Name]
 restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
   where
-    keep d | any (\n -> n `elem` names) (map unLoc $ con_name d) =
+    keep d | any (\n -> n `elem` names) (map unLoc $ con_names d) =
       case con_details d of
         PrefixCon _ -> Just d
         RecCon fields

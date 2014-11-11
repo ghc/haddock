@@ -367,17 +367,18 @@ renameDataDefn (HsDataDefn { dd_ND = nd, dd_ctxt = lcontext, dd_cType = cType
                        , dd_derivs = Nothing })
 
 renameCon :: ConDecl Name -> RnM (ConDecl DocName)
-renameCon decl@(ConDecl { con_name = lname, con_qvars = ltyvars
+renameCon decl@(ConDecl { con_names = lnames, con_qvars = ltyvars
                         , con_cxt = lcontext, con_details = details
                         , con_res = restype, con_doc = mbldoc }) = do
-      lname'    <- mapM renameL lname
+      lnames'   <- mapM renameL lnames
       ltyvars'  <- renameLTyVarBndrs ltyvars
       lcontext' <- renameLContext lcontext
       details'  <- renameDetails details
       restype'  <- renameResType restype
       mbldoc'   <- mapM renameLDocHsSyn mbldoc
-      return (decl { con_name = lname', con_qvars = ltyvars', con_cxt = lcontext'
-                   , con_details = details', con_res = restype', con_doc = mbldoc' })
+      return (decl { con_names = lnames', con_qvars = ltyvars'
+                   , con_cxt = lcontext', con_details = details'
+                   , con_res = restype', con_doc = mbldoc' })
   where
     renameDetails (RecCon fields) = do
       fields' <- mapM renameConDeclFieldField (concatMap unLoc fields)

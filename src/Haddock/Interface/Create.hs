@@ -329,7 +329,7 @@ subordinates instMap decl = case decl of
       where
         cons = map unL (dd_cons dd)
         constrs = [ (unL cname, maybeToList $ fmap unL $ con_doc c, M.empty)
-                  | c <- cons, cname <- con_name c ]
+                  | c <- cons, cname <- con_names c ]
         fields  = [ (unL n, maybeToList $ fmap unL doc, M.empty)
                   | RecCon flds <- map con_details cons
                   , ConDeclField n _ doc <- concatMap unLoc flds ]

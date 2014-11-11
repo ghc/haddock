@@ -212,7 +212,8 @@ instance Parent (ConDecl Name) where
 
 instance Parent (TyClDecl Name) where
   children d
-    | isDataDecl  d = map unLoc $ concatMap (con_name . unL) $ (dd_cons . tcdDataDefn) $ d
+    | isDataDecl  d = map unLoc $ concatMap (con_names . unL)
+                                $ (dd_cons . tcdDataDefn) $ d
     | isClassDecl d =
         map (unL . fdLName . unL) (tcdATs d) ++
         [ unL n | L _ (TypeSig ns _) <- tcdSigs d, n <- ns ]
@@ -224,7 +225,7 @@ family :: (NamedThing a, Parent a) => a -> (Name, [Name])
 family = getName &&& children
 
 familyConDecl :: ConDecl Name -> [(Name, [Name])]
-familyConDecl d = zip (map unL (con_name d)) (repeat $ children d)
+familyConDecl d = zip (map unL (con_names d)) (repeat $ children d)
 
 
 -- | A mapping from the parent (main-binder) to its children and from each
