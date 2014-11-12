@@ -258,7 +258,7 @@ synifyDataCon use_gadt_syntax dc = noLoc $
                 (dataConFieldLabels dc) linear_tys
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> error "synifyDataCon: contradiction!"
-          (True,False) -> RecCon field_tys
+          (True,False) -> RecCon [noLoc field_tys]
           (False,False) -> PrefixCon linear_tys
           (False,True) -> case linear_tys of
                            [a,b] -> InfixCon a b
@@ -267,7 +267,7 @@ synifyDataCon use_gadt_syntax dc = noLoc $
               then ResTyGADT (synifyType WithinType res_ty)
               else ResTyH98
  -- finally we get synifyDataCon's result!
- in ConDecl name Implicit{-we don't know nor care-}
+ in ConDecl [name] Implicit{-we don't know nor care-}
       qvars ctx hs_arg_tys hs_res_ty Nothing
       False --we don't want any "deprecated GADT syntax" warnings!
 
