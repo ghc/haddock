@@ -146,12 +146,12 @@ restrictDataDefn names defn@(HsDataDefn { dd_ND = new_or_data, dd_cons = cons })
 restrictCons :: [Name] -> [LConDecl Name] -> [LConDecl Name]
 restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
   where
-    keep d | unLoc (con_name d) `elem` names =
+    keep d | any (\n -> n `elem` names) (map unLoc $ con_names d) =
       case con_details d of
         PrefixCon _ -> Just d
         RecCon fields
-          | all field_avail fields -> Just d
-          | otherwise -> Just (d { con_details = PrefixCon (field_types fields) })
+          | all field_avail (concatMap unL fields) -> Just d
+          | otherwise -> Just (d { con_details = PrefixCon (field_types (concatMap unL fields)) })
           -- if we have *all* the field names available, then
           -- keep the record declaration.  Otherwise degrade to
           -- a constructor declaration.  This isn't quite right, but
@@ -162,7 +162,6 @@ restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
         field_types flds = [ t | ConDeclField _ t _ <- flds ]
 
     keep _ = Nothing
-
 
 restrictDecls :: [Name] -> [LSig Name] -> [LSig Name]
 restrictDecls names = mapMaybe (filterLSigNames (`elem` names))
