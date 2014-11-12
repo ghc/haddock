@@ -374,7 +374,8 @@ topDecls = filterClasses . filterDecls . collectDocs . sortByLoc . ungroup
 -- | Extract a map of fixity declarations only
 mkFixMap :: HsGroup Name -> FixMap
 mkFixMap group_ = M.fromList [ (n,f)
-                             | L _ (FixitySig (L _ n) f) <- hs_fixds group_ ]
+                             | L _ (FixitySig ns f) <- hs_fixds group_,
+                               L _ n <- ns ]
 
 
 -- | Take all declarations except pragmas, infix decls, rules from an 'HsGroup'.

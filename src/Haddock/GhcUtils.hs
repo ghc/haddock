@@ -97,11 +97,14 @@ filterLSigNames :: (name -> Bool) -> LSig name -> Maybe (LSig name)
 filterLSigNames p (L loc sig) = L loc <$> (filterSigNames p sig)
 
 filterSigNames :: (name -> Bool) -> Sig name -> Maybe (Sig name)
-filterSigNames p orig@(SpecSig n _ _)          = ifTrueJust (p $ unLoc n) orig
-filterSigNames p orig@(InlineSig n _)          = ifTrueJust (p $ unLoc n) orig
-filterSigNames p orig@(FixSig (FixitySig n _)) = ifTrueJust (p $ unLoc n) orig
-filterSigNames _ orig@(MinimalSig _)           = Just orig
-filterSigNames p (TypeSig ns ty)               =
+filterSigNames p orig@(SpecSig n _ _)           = ifTrueJust (p $ unLoc n) orig
+filterSigNames p orig@(InlineSig n _)           = ifTrueJust (p $ unLoc n) orig
+filterSigNames p (FixSig (FixitySig ns ty)) =
+  case filter (p . unLoc) ns of
+    []       -> Nothing
+    filtered -> Just (FixSig (FixitySig filtered ty))
+filterSigNames _ orig@(MinimalSig _)            = Just orig
+filterSigNames p (TypeSig ns ty)                =
   case filter (p . unLoc) ns of
     []       -> Nothing
     filtered -> Just (TypeSig filtered ty)
@@ -115,12 +118,12 @@ sigName :: LSig name -> [name]
 sigName (L _ sig) = sigNameNoLoc sig
 
 sigNameNoLoc :: Sig name -> [name]
-sigNameNoLoc (TypeSig   ns _)         = map unLoc ns
-sigNameNoLoc (PatSynSig n _ _ _ _)    = [unLoc n]
-sigNameNoLoc (SpecSig   n _ _)        = [unLoc n]
-sigNameNoLoc (InlineSig n _)          = [unLoc n]
-sigNameNoLoc (FixSig (FixitySig n _)) = [unLoc n]
-sigNameNoLoc _                        = []
+sigNameNoLoc (TypeSig   ns _)          = map unLoc ns
+sigNameNoLoc (PatSynSig n _ _ _ _)     = [unLoc n]
+sigNameNoLoc (SpecSig   n _ _)         = [unLoc n]
+sigNameNoLoc (InlineSig n _)           = [unLoc n]
+sigNameNoLoc (FixSig (FixitySig ns _)) = map unLoc ns
+sigNameNoLoc _                         = []
 
 
 isTyClD :: HsDecl a -> Bool
