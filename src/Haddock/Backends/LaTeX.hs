@@ -657,7 +657,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
 
  where
     doRecordFields fields =
-        vcat (map (ppSideBySideField subdocs unicode) (concatMap unLoc fields))
+        vcat (map (ppSideBySideField subdocs unicode) (map unLoc fields))
 
     doGADTCon args resTy = decltt (ppOcc <+> dcolon unicode <+> hsep [
                                ppForAll forall ltvs (con_cxt con) unicode,
@@ -682,12 +682,13 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
 
 
 ppSideBySideField :: [(DocName, DocForDecl DocName)] -> Bool -> ConDeclField DocName ->  LaTeX
-ppSideBySideField subdocs unicode (ConDeclField (L _ name) ltype _) =
-  decltt (ppBinder (nameOccName . getName $ name)
+ppSideBySideField subdocs unicode (ConDeclField names ltype _) =
+  decltt (cat (punctuate comma (map (ppBinder . nameOccName . getName . unL) names))
     <+> dcolon unicode <+> ppLType unicode ltype) <-> rDoc mbDoc
   where
     -- don't use cd_fld_doc for same reason we don't use con_doc above
-    mbDoc = lookup name subdocs >>= combineDocumentation . fst
+    -- Where there is more than one name, they all have the same documentation
+    mbDoc = lookup (unL $ head names) subdocs >>= combineDocumentation . fst
 
 -- {-
 -- ppHsFullConstr :: HsConDecl -> LaTeX
