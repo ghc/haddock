@@ -209,7 +209,7 @@ class Parent a where
 instance Parent (ConDecl Name) where
   children con =
     case con_details con of
-      RecCon fields -> map (unL . cd_fld_name) (concatMap unLoc fields)
+      RecCon fields -> map unL $ concatMap (cd_fld_names . unL) fields
       _             -> []
 
 instance Parent (TyClDecl Name) where

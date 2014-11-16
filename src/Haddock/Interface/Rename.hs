@@ -230,8 +230,7 @@ renameType t = case t of
   HsTyLit x -> return (HsTyLit x)
 
   HsWrapTy a b            -> HsWrapTy a <$> renameType b
-  HsRecTy a               -> do a' <- mapM renameConDeclFieldField (concatMap unLoc a)
-                                return (HsRecTy [noLoc a'])
+  HsRecTy a               -> HsRecTy <$> mapM renameConDeclFieldField a
   HsCoreTy a              -> pure (HsCoreTy a)
   HsExplicitListTy  a b   -> HsExplicitListTy  a <$> mapM renameLType b
   HsExplicitTupleTy a b   -> HsExplicitTupleTy a <$> mapM renameLType b
@@ -379,8 +378,8 @@ renameCon decl@(ConDecl { con_names = lnames, con_qvars = ltyvars
 
   where
     renameDetails (RecCon fields) = do
-      fields' <- mapM renameConDeclFieldField (concatMap unLoc fields)
-      return (RecCon [noLoc fields'])
+      fields' <- mapM renameConDeclFieldField fields
+      return (RecCon fields')
     renameDetails (PrefixCon ps) = return . PrefixCon =<< mapM renameLType ps
     renameDetails (InfixCon a b) = do
       a' <- renameLType a
@@ -391,12 +390,12 @@ renameCon decl@(ConDecl { con_names = lnames, con_qvars = ltyvars
     renameResType (ResTyGADT t) = return . ResTyGADT =<< renameLType t
 
 
-renameConDeclFieldField :: ConDeclField Name -> RnM (ConDeclField DocName)
-renameConDeclFieldField (ConDeclField name t doc) = do
-  name' <- renameL name
+renameConDeclFieldField :: LConDeclField Name -> RnM (LConDeclField DocName)
+renameConDeclFieldField (L l (ConDeclField names t doc)) = do
+  names' <- mapM renameL names
   t'   <- renameLType t
   doc' <- mapM renameLDocHsSyn doc
-  return (ConDeclField name' t' doc')
+  return $ L l (ConDeclField names' t' doc')
 
 
 renameSig :: Sig Name -> RnM (Sig DocName)

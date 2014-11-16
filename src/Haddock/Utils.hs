@@ -150,15 +150,15 @@ restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
       case con_details d of
         PrefixCon _ -> Just d
         RecCon fields
-          | all field_avail (concatMap unL fields) -> Just d
-          | otherwise -> Just (d { con_details = PrefixCon (field_types (concatMap unL fields)) })
+          | all field_avail fields -> Just d
+          | otherwise -> Just (d { con_details = PrefixCon (field_types (map unL fields)) })
           -- if we have *all* the field names available, then
           -- keep the record declaration.  Otherwise degrade to
           -- a constructor declaration.  This isn't quite right, but
           -- it's the best we can do.
         InfixCon _ _ -> Just d
       where
-        field_avail (ConDeclField n _ _) = unLoc n `elem` names
+        field_avail (L _ (ConDeclField ns _ _)) = all (\n -> unLoc n `elem` names) ns
         field_types flds = [ t | ConDeclField _ t _ <- flds ]
 
     keep _ = Nothing

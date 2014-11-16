@@ -332,7 +332,8 @@ subordinates instMap decl = case decl of
                   | c <- cons, cname <- con_names c ]
         fields  = [ (unL n, maybeToList $ fmap unL doc, M.empty)
                   | RecCon flds <- map con_details cons
-                  , ConDeclField n _ doc <- concatMap unLoc flds ]
+                  , L _ (ConDeclField ns _ doc) <- flds
+                  , n <- ns ]
 
 -- | Extract function argument docs from inside types.
 typeDocs :: HsDecl Name -> Map Int HsDocString
@@ -773,7 +774,8 @@ extractDecl name mdl decl
       InstD (ClsInstD ClsInstDecl { cid_datafam_insts = insts }) ->
         let matches = [ d | L _ d <- insts
                           , L _ ConDecl { con_details = RecCon rec } <- dd_cons (dfid_defn d)
-                          , ConDeclField { cd_fld_name = L _ n } <- concatMap unLoc rec
+                          , ConDeclField { cd_fld_names = ns } <- map unLoc rec
+                          , L _ n <- ns
                           , n == name
                       ]
         in case matches of
@@ -805,11 +807,11 @@ extractRecSel _ _ _ _ [] = error "extractRecSel: selector not found"
 
 extractRecSel nm mdl t tvs (L _ con : rest) =
   case con_details con of
-    RecCon fields | (ConDeclField n ty _ : _) <- matching_fields (concatMap unLoc fields) ->
+    RecCon fields | ((n,L _ (ConDeclField _nn ty _)) : _) <- matching_fields fields ->
       L (getLoc n) (TypeSig [noLoc nm] (noLoc (HsFunTy data_ty (getBangType ty))))
     _ -> extractRecSel nm mdl t tvs rest
  where
-  matching_fields flds = [ f | f@(ConDeclField n _ _) <- flds, unLoc n == nm ]
+  matching_fields flds = [ (n,f) | f@(L _ (ConDeclField ns _ _)) <- flds, n <- ns, unLoc n == nm ]
   data_ty
     | ResTyGADT ty <- con_res con = ty
     | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar t)) tvs
