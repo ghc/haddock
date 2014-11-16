@@ -254,12 +254,12 @@ synifyDataCon use_gadt_syntax dc = noLoc $
             -- HsNoBang never appears, it's implied instead.
           )
           arg_tys (dataConStrictMarks dc)
-  field_tys = zipWith (\field synTy -> ConDeclField
-                                           (synifyName field) synTy Nothing)
+  field_tys = zipWith (\field synTy -> noLoc $ ConDeclField
+                                               [synifyName field] synTy Nothing)
                 (dataConFieldLabels dc) linear_tys
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> error "synifyDataCon: contradiction!"
-          (True,False) -> RecCon [noLoc field_tys]
+          (True,False) -> RecCon field_tys
           (False,False) -> PrefixCon linear_tys
           (False,True) -> case linear_tys of
                            [a,b] -> InfixCon a b
