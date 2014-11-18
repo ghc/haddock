@@ -26,6 +26,7 @@ import OccName
 import Name                 ( nameOccName )
 import RdrName              ( rdrNameOcc )
 import FastString           ( unpackFS, unpackLitString, zString )
+import Outputable           ( panic)
 
 import qualified Data.Map as Map
 import System.Directory
@@ -680,8 +681,10 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
     forall  = con_explicit con
     -- don't use "con_doc con", in case it's reconstructed from a .hi file,
     -- or also because we want Haddock to do the doc-parsing, not GHC.
-    mbDoc = lookup (unLoc $ head $ con_names con) subdocs >>=
-            combineDocumentation . fst
+    mbDoc = case con_names con of
+              [] -> panic "empty con_names"
+              (cn:_) -> lookup (unLoc cn) subdocs >>=
+                        combineDocumentation . fst
     mkFunTy a b = noLoc (HsFunTy a b)
 
 
