@@ -360,22 +360,30 @@ ppPatSig :: SrcSpan -> DocForDecl DocName -> DocName
           -> HsPatSynDetails (HsType DocName) -> HsType DocName
           -> HsContext DocName -> HsContext DocName
           -> Bool -> LaTeX
-ppPatSig _loc (doc, _argDocs) docname args typ prov req unicode = declWithDoc pref1 (documentationToLaTeX doc)
+ppPatSig _loc (doc, _argDocs) name args pat_ty prov req unicode =
+    declWithDoc pref1 (documentationToLaTeX doc)
   where
     pref1 = hsep [ keyword "pattern"
-                 , pp_ctx prov
-                 , pp_head
+                 , ppDocBinder name
                  , dcolon unicode
-                 , pp_ctx req
-                 , ppType unicode typ
+                 , ctx
+                 , ppType unicode ty
                  ]
 
-    pp_head = case args of
-        PrefixPatSyn typs -> hsep $ ppDocBinder docname : map pp_type typs
-        InfixPatSyn left right -> hsep [pp_type left, ppDocBinderInfix docname, pp_type right]
+    ctx = case (ppContextMaybe prov, ppContextMaybe req) of
+        (Nothing,   Nothing)  -> empty
+        (Nothing,   Just req) -> parens empty <+> darr <+> req <+> darr
+        (Just prov, Nothing)  -> prov <+> darr
+        (Just prov, Just req) -> prov <+> darr <+> req <+> darr
+    darr = darrow unicode
 
-    pp_type = ppParendType unicode
-    pp_ctx ctx = ppContext ctx unicode
+    arg_tys = case args of
+        PrefixPatSyn arg_tys -> arg_tys
+        InfixPatSyn left right -> [left, right]
+    ty = foldr (\t1 t2 -> HsFunTy (noLoc t1) (noLoc t2)) pat_ty arg_tys
+
+    ppContextMaybe []   = Nothing
+    ppContextMaybe ctxt = Just $ ppContext ctxt unicode
 
 ppTypeOrFunSig :: SrcSpan -> [DocName] -> HsType DocName
                -> DocForDecl DocName -> (LaTeX, LaTeX, LaTeX)
@@ -951,11 +959,6 @@ ppBinder n
   | isInfixName n = parens $ ppOccName n
   | otherwise     = ppOccName n
 
-ppBinderInfix :: OccName -> LaTeX
-ppBinderInfix n
-  | isInfixName n = ppOccName n
-  | otherwise     = quotes $ ppOccName n
-
 isInfixName :: OccName -> Bool
 isInfixName n = isVarSym n || isConSym n
 
@@ -993,9 +996,6 @@ ppLDocName (L _ d) = ppDocName d
 
 ppDocBinder :: DocName -> LaTeX
 ppDocBinder = ppBinder . nameOccName . getName
-
-ppDocBinderInfix :: DocName -> LaTeX
-ppDocBinderInfix = ppBinderInfix . nameOccName . getName
 
 
 ppName :: Name -> LaTeX

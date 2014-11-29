@@ -85,27 +85,35 @@ ppPatSig :: Bool -> LinksInfo -> SrcSpan -> DocForDecl DocName ->
             HsPatSynDetails (HsType DocName) -> HsType DocName ->
             HsContext DocName -> HsContext DocName -> [(DocName, Fixity)] ->
             Splice -> Unicode -> Qualification -> Html
-ppPatSig summary links loc (doc, _argDocs) docname args typ prov req fixities
+ppPatSig summary links loc (doc, _argDocs) name args pat_ty prov req fixities
          splice unicode qual
   | summary = pref1
-  | otherwise = topDeclElem links loc splice [docname] (pref1 <+> ppFixities fixities qual)
+  | otherwise = topDeclElem links loc splice [name] (pref1 <+> ppFixities fixities qual)
                 +++ docSection qual doc
   where
-    pref1 = hsep [ toHtml "pattern"
-                 , pp_cxt prov
-                 , pp_head
+    occname = nameOccName . getName $ name
+
+    pref1 = hsep [ keyword "pattern"
+                 , ppBinder summary occname
                  , dcolon unicode
-                 , pp_cxt req
-                 , ppType unicode qual typ
+                 , ctx
+                 , ppType unicode qual ty
                  ]
-    pp_head = case args of
-        PrefixPatSyn typs -> hsep $ ppBinder summary occname : map pp_type typs
-        InfixPatSyn left right -> hsep [pp_type left, ppBinderInfix summary occname, pp_type right]
 
-    pp_cxt cxt = ppContext cxt unicode qual
-    pp_type = ppParendType unicode qual
+    ctx = case (ppContextMaybe prov, ppContextMaybe req) of
+        (Nothing,   Nothing)  -> noHtml
+        (Nothing,   Just req) -> parens noHtml <+> darr <+> req <+> darr
+        (Just prov, Nothing)  -> prov <+> darr
+        (Just prov, Just req) -> prov <+> darr <+> req <+> darr
+    darr = darrow unicode
 
-    occname = nameOccName . getName $ docname
+    arg_tys = case args of
+        PrefixPatSyn arg_tys -> arg_tys
+        InfixPatSyn left right -> [left, right]
+    ty = foldr (\t1 t2 -> HsFunTy (noLoc t1) (noLoc t2)) pat_ty arg_tys
+
+    ppContextMaybe []   = Nothing
+    ppContextMaybe ctxt = Just $ ppContext ctxt unicode qual
 
 ppSigLike :: Bool -> LinksInfo -> SrcSpan -> Html -> DocForDecl DocName ->
              [DocName] -> [(DocName, Fixity)] -> (HsType DocName, Html) ->
