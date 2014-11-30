@@ -948,8 +948,8 @@ ppr_mono_ty _ (HsTyLit t) u = ppr_tylit t u
 
 
 ppr_tylit :: HsTyLit -> Bool -> LaTeX
-ppr_tylit (HsNumTy n) _ = integer n
-ppr_tylit (HsStrTy s) _ = text (show s)
+ppr_tylit (HsNumTy _ n) _ = integer n
+ppr_tylit (HsStrTy _ s) _ = text (show s)
   -- XXX: Ok in verbatim, but not otherwise
   -- XXX: Do something with Unicode parameter?
 
