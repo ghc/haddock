@@ -908,8 +908,8 @@ ppr_mono_ty _ (HsNamedWildcardTy name) _ q = ppDocName q Prefix True name
 ppr_mono_ty _ (HsTyLit n) _ _ = ppr_tylit n
 
 ppr_tylit :: HsTyLit -> Html
-ppr_tylit (HsNumTy n) = toHtml (show n)
-ppr_tylit (HsStrTy s) = toHtml (show s)
+ppr_tylit (HsNumTy _ n) = toHtml (show n)
+ppr_tylit (HsStrTy _ s) = toHtml (show s)
 
 
 ppr_fun_ty :: Int -> LHsType DocName -> LHsType DocName -> Unicode -> Qualification -> Html

@@ -365,8 +365,8 @@ synifyType s forallty@(ForAllTy _tv _ty) =
 synifyType _ (LitTy t) = noLoc $ HsTyLit $ synifyTyLit t
 
 synifyTyLit :: TyLit -> HsTyLit
-synifyTyLit (NumTyLit n) = HsNumTy n
-synifyTyLit (StrTyLit s) = HsStrTy s
+synifyTyLit (NumTyLit n) = HsNumTy "" n
+synifyTyLit (StrTyLit s) = HsStrTy "" s
 
 synifyKindSig :: Kind -> LHsKind Name
 synifyKindSig k = synifyType WithinType k
