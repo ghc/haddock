@@ -471,7 +471,7 @@ ppClassDecl summary links instances fixities loc d subdocs
                            -- there are different subdocs for different names in a single
                            -- type signature?
 
-    minimalBit = case [ s | L _ (MinimalSig s) <- lsigs ] of
+    minimalBit = case [ s | L _ (MinimalSig _ s) <- lsigs ] of
       -- Miminal complete definition = every shown method
       And xs : _ | sort [getName n | Var (L _ n) <- xs] ==
                    sort [getName n | L _ (TypeSig ns _ _) <- lsigs, L _ n <- ns]

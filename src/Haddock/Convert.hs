@@ -73,7 +73,7 @@ tyThingToLHsDecl t = noLoc $ case t of
          , tcdFDs = map (\ (l,r) -> noLoc
                         (map getName l, map getName r) ) $
                          snd $ classTvsFds cl
-         , tcdSigs = noLoc (MinimalSig . fmap noLoc $ classMinimalDef cl) :
+         , tcdSigs = noLoc (MinimalSig mempty . fmap noLoc $ classMinimalDef cl) :
                       map (noLoc . synifyIdSig DeleteTopLevelQuantification)
                         (classMethods cl)
          , tcdMeths = emptyBag --ignore default method definitions, they don't affect signature
@@ -245,8 +245,8 @@ synifyDataCon use_gadt_syntax dc = noLoc $
   linear_tys = zipWith (\ty bang ->
             let tySyn = synifyType WithinType ty
                 src_bang = case bang of
-                             HsUnpack {} -> HsUserBang (Just True) True
-                             HsStrict    -> HsUserBang (Just False) True
+                             HsUnpack {} -> HsUserBang Nothing (Just True) True
+                             HsStrict    -> HsUserBang Nothing (Just False) True
                              _           -> bang
             in case src_bang of
                  HsNoBang -> tySyn

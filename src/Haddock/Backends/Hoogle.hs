@@ -145,7 +145,7 @@ ppClass dflags x = out dflags x{tcdSigs=[]} :
             concatMap (ppSig dflags . addContext . unL) (tcdSigs x)
     where
         addContext (TypeSig name (L l sig) nwcs) = TypeSig name (L l $ f sig) nwcs
-        addContext (MinimalSig sig) = MinimalSig sig
+        addContext (MinimalSig src sig) = MinimalSig src sig
         addContext _ = error "expected TypeSig"
 
         f (HsForAllTy a b c con d) = HsForAllTy a b c (reL (context : unLoc con)) d
