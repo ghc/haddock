@@ -415,7 +415,7 @@ renameSig sig = case sig of
   FixSig (FixitySig lnames fixity) -> do
     lnames' <- mapM renameL lnames
     return $ FixSig (FixitySig lnames' fixity)
-  MinimalSig s -> MinimalSig <$> traverse renameL s
+  MinimalSig src s -> MinimalSig src <$> traverse renameL s
   -- we have filtered out all other kinds of signatures in Interface.Create
   _ -> error "expected TypeSig"
 

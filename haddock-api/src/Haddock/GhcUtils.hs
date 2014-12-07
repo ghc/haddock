@@ -104,8 +104,8 @@ filterSigNames p (FixSig (FixitySig ns ty)) =
   case filter (p . unLoc) ns of
     []       -> Nothing
     filtered -> Just (FixSig (FixitySig filtered ty))
-filterSigNames _ orig@(MinimalSig _)           = Just orig
-filterSigNames p (TypeSig ns ty nwcs)    =
+filterSigNames _ orig@(MinimalSig _ _)      = Just orig
+filterSigNames p (TypeSig ns ty nwcs) =
   case filter (p . unLoc) ns of
     []       -> Nothing
     filtered -> Just (TypeSig filtered ty nwcs)
