@@ -381,7 +381,7 @@ ppHsContext cxt unicode qual = parenList (map (ppType unicode qual) cxt)
 
 
 ppClassHdr :: Bool -> Located [LHsType DocName] -> DocName
-           -> LHsTyVarBndrs DocName -> [Located ([DocName], [DocName])]
+           -> LHsTyVarBndrs DocName -> [Located ([Located DocName], [Located DocName])]
            -> Unicode -> Qualification -> Html
 ppClassHdr summ lctxt n tvs fds unicode qual =
   keyword "class"
@@ -390,13 +390,13 @@ ppClassHdr summ lctxt n tvs fds unicode qual =
   <+> ppFds fds unicode qual
 
 
-ppFds :: [Located ([DocName], [DocName])] -> Unicode -> Qualification -> Html
+ppFds :: [Located ([Located DocName], [Located DocName])] -> Unicode -> Qualification -> Html
 ppFds fds unicode qual =
   if null fds then noHtml else
         char '|' <+> hsep (punctuate comma (map (fundep . unLoc) fds))
   where
         fundep (vars1,vars2) = ppVars vars1 <+> arrow unicode <+> ppVars vars2
-        ppVars = hsep . map (ppDocName qual Prefix True)
+        ppVars = hsep . map ((ppDocName qual Prefix True) . unLoc)
 
 ppShortClassDecl :: Bool -> LinksInfo -> TyClDecl DocName -> SrcSpan
                  -> [(DocName, DocForDecl DocName)]

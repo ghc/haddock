@@ -75,7 +75,7 @@ tyThingToLHsDecl t = case t of
          , tcdLName = synifyName cl
          , tcdTyVars = synifyTyVars (classTyVars cl)
          , tcdFDs = map (\ (l,r) -> noLoc
-                        (map getName l, map getName r) ) $
+                        (map (noLoc . getName) l, map (noLoc . getName) r) ) $
                          snd $ classTvsFds cl
          , tcdSigs = noLoc (MinimalSig mempty . fmap noLoc $ classMinimalDef cl) :
                       map (noLoc . synifyIdSig DeleteTopLevelQuantification)

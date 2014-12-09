@@ -331,9 +331,9 @@ renameTyClD d = case d of
 
   where
     renameLFunDep (L loc (xs, ys)) = do
-      xs' <- mapM rename xs
-      ys' <- mapM rename ys
-      return (L loc (xs', ys'))
+      xs' <- mapM rename (map unLoc xs)
+      ys' <- mapM rename (map unLoc ys)
+      return (L loc (map noLoc xs', map noLoc ys'))
 
     renameLSig (L loc sig) = return . L loc =<< renameSig sig
 
