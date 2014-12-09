@@ -477,7 +477,7 @@ rDoc = maybeDoc . fmap latexStripTrailingWhitespace
 
 
 ppClassHdr :: Bool -> Located [LHsType DocName] -> DocName
-           -> LHsTyVarBndrs DocName -> [Located ([DocName], [DocName])]
+           -> LHsTyVarBndrs DocName -> [Located ([Located DocName], [Located DocName])]
            -> Bool -> LaTeX
 ppClassHdr summ lctxt n tvs fds unicode =
   keyword "class"
@@ -486,13 +486,13 @@ ppClassHdr summ lctxt n tvs fds unicode =
   <+> ppFds fds unicode
 
 
-ppFds :: [Located ([DocName], [DocName])] -> Bool -> LaTeX
+ppFds :: [Located ([Located DocName], [Located DocName])] -> Bool -> LaTeX
 ppFds fds unicode =
   if null fds then empty else
     char '|' <+> hsep (punctuate comma (map (fundep . unLoc) fds))
   where
-    fundep (vars1,vars2) = hsep (map ppDocName vars1) <+> arrow unicode <+>
-                           hsep (map ppDocName vars2)
+    fundep (vars1,vars2) = hsep (map (ppDocName . unLoc) vars1) <+> arrow unicode <+>
+                           hsep (map (ppDocName . unLoc) vars2)
 
 
 ppClassDecl :: [DocInstance DocName] -> SrcSpan
