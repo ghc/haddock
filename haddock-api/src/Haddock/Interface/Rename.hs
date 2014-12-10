@@ -378,9 +378,9 @@ renameCon decl@(ConDecl { con_names = lnames, con_qvars = ltyvars
                    , con_details = details', con_res = restype', con_doc = mbldoc' })
 
   where
-    renameDetails (RecCon fields) = do
+    renameDetails (RecCon (L l fields)) = do
       fields' <- mapM renameConDeclFieldField fields
-      return (RecCon fields')
+      return (RecCon (L l fields'))
     renameDetails (PrefixCon ps) = return . PrefixCon =<< mapM renameLType ps
     renameDetails (InfixCon a b) = do
       a' <- renameLType a
