@@ -279,7 +279,7 @@ synifyDataCon use_gadt_syntax dc =
                 (dataConFieldLabels dc) linear_tys
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> Left "synifyDataCon: contradiction!"
-          (True,False) -> return $ RecCon field_tys
+          (True,False) -> return $ RecCon (noLoc field_tys)
           (False,False) -> return $ PrefixCon linear_tys
           (False,True) -> case linear_tys of
                            [a,b] -> return $ InfixCon a b

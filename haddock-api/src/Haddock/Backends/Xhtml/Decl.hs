@@ -600,7 +600,7 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
     PrefixCon args ->
       (header_ unicode qual +++ hsep (ppOcc
             : map (ppLParendType unicode qual) args), noHtml, noHtml)
-    RecCon fields ->
+    RecCon (L _ fields) ->
       (header_ unicode qual +++ ppOcc <+> char '{',
        doRecordFields fields,
        char '}')
@@ -617,8 +617,8 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
     -- Constr :: (Context) => { field :: a, field2 :: b } -> Ty (a, b)
     -- (except each field gets its own line in docs, to match
     -- non-GADT records)
-    RecCon fields -> (ppOcc <+> dcolon unicode <+>
-                            ppForAllCon forall_ ltvs lcontext unicode qual <+> char '{',
+    RecCon (L _ fields) -> (ppOcc <+> dcolon unicode <+>
+                            ppForAll forall_ ltvs lcontext unicode qual <+> char '{',
                             doRecordFields fields,
                             char '}' <+> arrow unicode <+> ppLType unicode qual resTy)
     InfixCon arg1 arg2 -> (doGADTCon [arg1, arg2] resTy, noHtml, noHtml)
@@ -690,7 +690,7 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con) = (decl, mbDoc, field
         InfixCon arg1 arg2 -> doGADTCon [arg1, arg2] resTy
 
     fieldPart = case con_details con of
-        RecCon fields -> [doRecordFields fields]
+        RecCon (L _ fields) -> [doRecordFields fields]
         _ -> []
 
     doRecordFields fields = subFields qual

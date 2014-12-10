@@ -636,7 +636,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
                  map (ppLParendType unicode) args))
       <-> rDoc mbDoc <+> nl
 
-    RecCon fields ->
+    RecCon (L _ fields) ->
       (decltt (header_ unicode <+> ppOcc)
         <-> rDoc mbDoc <+> nl)
       $$
@@ -652,7 +652,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con) =
     -- prefix & infix could also use hsConDeclArgTys if it seemed to
     -- simplify the code.
     PrefixCon args -> doGADTCon args resTy
-    cd@(RecCon fields) -> doGADTCon (hsConDeclArgTys cd) resTy <+> nl $$
+    cd@(RecCon (L _ fields)) -> doGADTCon (hsConDeclArgTys cd) resTy <+> nl $$
                                      doRecordFields fields
     InfixCon arg1 arg2 -> doGADTCon [arg1, arg2] resTy
 
