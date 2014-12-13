@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances, ViewPatterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK hide #-}
@@ -185,10 +186,11 @@ before = (<) `on` getLoc
 instance Foldable (GenLocated l) where
   foldMap f (L _ x) = f x
 
-
+#if __GLASGOW_HASKELL__ < 709
 instance Traversable (GenLocated l) where
   mapM f (L l x) = (return . L l) =<< f x
   traverse f (L l x) = L l <$> f x
+#endif
 
 -------------------------------------------------------------------------------
 -- * NamedThing instances
