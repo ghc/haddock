@@ -146,7 +146,7 @@ synifyTyCon coax tc
     DataDecl { tcdLName = synifyName tc
              , tcdTyVars =       -- tyConTyVars doesn't work on fun/prim, but we can make them up:
                          let mk_hs_tv realKind fakeTyVar
-                                = noLoc $ KindedTyVar (getName fakeTyVar)
+                                = noLoc $ KindedTyVar (noLoc (getName fakeTyVar))
                                                       (synifyKindSig realKind)
                          in HsQTvs { hsq_kvs = []   -- No kind polymorphism
                                    , hsq_tvs = zipWith mk_hs_tv (fst (splitKindFunTys (tyConKind tc)))
@@ -313,7 +313,7 @@ synifyTyVars ktvs = HsQTvs { hsq_kvs = map tyVarName kvs
     (kvs, tvs) = partition isKindVar ktvs
     synifyTyVar tv
       | isLiftedTypeKind kind = noLoc (UserTyVar name)
-      | otherwise             = noLoc (KindedTyVar name (synifyKindSig kind))
+      | otherwise             = noLoc (KindedTyVar (noLoc name) (synifyKindSig kind))
       where
         kind = tyVarKind tv
         name = getName tv
