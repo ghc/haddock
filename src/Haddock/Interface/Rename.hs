@@ -252,10 +252,10 @@ renameLTyVarBndr :: LHsTyVarBndr Name -> RnM (LHsTyVarBndr DocName)
 renameLTyVarBndr (L loc (UserTyVar n))
   = do { n' <- rename n
        ; return (L loc (UserTyVar n')) }
-renameLTyVarBndr (L loc (KindedTyVar n kind))
+renameLTyVarBndr (L loc (KindedTyVar (L lv n) kind))
   = do { n' <- rename n
        ; kind' <- renameLKind kind
-       ; return (L loc (KindedTyVar n' kind')) }
+       ; return (L loc (KindedTyVar (L lv n') kind')) }
 
 renameLContext :: Located [LHsType Name] -> RnM (Located [LHsType DocName])
 renameLContext (L loc context) = do
