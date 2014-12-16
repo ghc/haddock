@@ -146,7 +146,7 @@ ppTypeOrFunSig summary links loc docnames typ (doc, argDocs) (pref1, pref2, sep)
 
 ppForAll :: LHsTyVarBndrs DocName -> Unicode -> Qualification -> Html
 ppForAll tvs unicode qual =
-  case [ppKTv n k | L _ (KindedTyVar n k) <- hsQTvBndrs tvs] of
+  case [ppKTv n k | L _ (KindedTyVar (L _ n) k) <- hsQTvBndrs tvs] of
     [] -> noHtml
     ts -> forallSymbol unicode <+> hsep ts +++ dot
   where ppKTv n k = parens $
@@ -618,7 +618,7 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
     -- (except each field gets its own line in docs, to match
     -- non-GADT records)
     RecCon (L _ fields) -> (ppOcc <+> dcolon unicode <+>
-                            ppForAll forall_ ltvs lcontext unicode qual <+> char '{',
+                            ppForAllCon forall_ ltvs lcontext unicode qual <+> char '{',
                             doRecordFields fields,
                             char '}' <+> arrow unicode <+> ppLType unicode qual resTy)
     InfixCon arg1 arg2 -> (doGADTCon [arg1, arg2] resTy, noHtml, noHtml)
