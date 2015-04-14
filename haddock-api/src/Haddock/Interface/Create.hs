@@ -798,7 +798,7 @@ extractDecl name mdl decl
 
 
 toTypeNoLoc :: Located Name -> LHsType Name
-toTypeNoLoc = noLoc . HsTyVar . unLoc
+toTypeNoLoc = noLoc . HsTyVar
 
 
 extractClassDecl :: Name -> [Located Name] -> LSig Name -> LSig Name
@@ -825,7 +825,7 @@ extractRecSel nm mdl t tvs (L _ con : rest) =
   matching_fields flds = [ (n,f) | f@(L _ (ConDeclField ns _ _)) <- flds, n <- ns, unLoc n == nm ]
   data_ty
     | ResTyGADT _ ty <- con_res con = ty
-    | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar t)) tvs
+    | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar (noLoc t))) tvs
 
 
 -- | Keep export items with docs.

@@ -188,7 +188,7 @@ renameType t = case t of
     ltype'    <- renameLType ltype
     return (HsForAllTy expl extra tyvars' lcontext' ltype')
 
-  HsTyVar n -> return . HsTyVar =<< rename n
+  HsTyVar n -> return . HsTyVar =<< renameL n
   HsBangTy b ltype -> return . HsBangTy b =<< renameLType ltype
 
   HsAppTy a b -> do

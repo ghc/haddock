@@ -857,26 +857,26 @@ ppr_mono_ty ctxt_prec (HsForAllTy expl extra tvs ctxt ty) unicode qual
                  Nothing  -> ctxt
 
 -- UnicodeSyntax alternatives
-ppr_mono_ty _ (HsTyVar name) True _
+ppr_mono_ty _ (HsTyVar (L _ name)) True _
   | getOccString (getName name) == "*"    = toHtml "★"
   | getOccString (getName name) == "(->)" = toHtml "(→)"
 
-ppr_mono_ty _         (HsBangTy b ty)     u q = ppBang b +++ ppLParendType u q ty
-ppr_mono_ty _         (HsTyVar name)      _ q = ppDocName q Prefix True name
-ppr_mono_ty ctxt_prec (HsFunTy ty1 ty2)   u q = ppr_fun_ty ctxt_prec ty1 ty2 u q
-ppr_mono_ty _         (HsTupleTy con tys) u q = tupleParens con (map (ppLType u q) tys)
-ppr_mono_ty _         (HsKindSig ty kind) u q =
+ppr_mono_ty _         (HsBangTy b ty)      u q = ppBang b +++ ppLParendType u q ty
+ppr_mono_ty _         (HsTyVar (L _ name)) _ q = ppDocName q Prefix True name
+ppr_mono_ty ctxt_prec (HsFunTy ty1 ty2)    u q = ppr_fun_ty ctxt_prec ty1 ty2 u q
+ppr_mono_ty _         (HsTupleTy con tys)  u q = tupleParens con (map (ppLType u q) tys)
+ppr_mono_ty _         (HsKindSig ty kind)  u q =
     parens (ppr_mono_lty pREC_TOP ty u q <+> dcolon u <+> ppLKind u q kind)
-ppr_mono_ty _         (HsListTy ty)       u q = brackets (ppr_mono_lty pREC_TOP ty u q)
-ppr_mono_ty _         (HsPArrTy ty)       u q = pabrackets (ppr_mono_lty pREC_TOP ty u q)
-ppr_mono_ty ctxt_prec (HsIParamTy n ty)   u q =
+ppr_mono_ty _         (HsListTy ty)        u q = brackets (ppr_mono_lty pREC_TOP ty u q)
+ppr_mono_ty _         (HsPArrTy ty)        u q = pabrackets (ppr_mono_lty pREC_TOP ty u q)
+ppr_mono_ty ctxt_prec (HsIParamTy n ty)    u q =
     maybeParen ctxt_prec pREC_CTX $ ppIPName n <+> dcolon u <+> ppr_mono_lty pREC_TOP ty u q
-ppr_mono_ty _         (HsSpliceTy {})     _ _ = error "ppr_mono_ty HsSpliceTy"
-ppr_mono_ty _         (HsRecTy {})        _ _ = error "ppr_mono_ty HsRecTy"
-ppr_mono_ty _         (HsCoreTy {})       _ _ = error "ppr_mono_ty HsCoreTy"
+ppr_mono_ty _         (HsSpliceTy {})      _ _ = error "ppr_mono_ty HsSpliceTy"
+ppr_mono_ty _         (HsRecTy {})         _ _ = error "ppr_mono_ty HsRecTy"
+ppr_mono_ty _         (HsCoreTy {})        _ _ = error "ppr_mono_ty HsCoreTy"
 ppr_mono_ty _         (HsExplicitListTy _ tys) u q = quote $ brackets $ hsep $ punctuate comma $ map (ppLType u q) tys
 ppr_mono_ty _         (HsExplicitTupleTy _ tys) u q = quote $ parenList $ map (ppLType u q) tys
-ppr_mono_ty _         (HsWrapTy {})       _ _ = error "ppr_mono_ty HsWrapTy"
+ppr_mono_ty _         (HsWrapTy {})        _ _ = error "ppr_mono_ty HsWrapTy"
 
 ppr_mono_ty ctxt_prec (HsEqTy ty1 ty2) unicode qual
   = maybeParen ctxt_prec pREC_CTX $
