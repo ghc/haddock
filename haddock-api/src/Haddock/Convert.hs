@@ -173,6 +173,7 @@ synifyTyCon coax tc
                   (brListMap (noLoc . synifyAxBranch tc) branches)
               BuiltInSynFamTyCon {} -> return $ ClosedTypeFamily []
               AbstractClosedSynFamilyTyCon {} -> return $ ClosedTypeFamily []
+              EmptyClosedSynFamilyTyCon {}    -> return $ ClosedTypeFamily []
         in info >>= \i ->
            return (FamDecl
                    (FamilyDecl { fdInfo = i
