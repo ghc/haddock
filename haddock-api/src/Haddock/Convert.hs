@@ -168,12 +168,13 @@ synifyTyCon coax tc
       Just rhs ->
         let info = case rhs of
               OpenSynFamilyTyCon -> return OpenTypeFamily
-              ClosedSynFamilyTyCon (CoAxiom { co_ax_branches = branches }) ->
-                return $ ClosedTypeFamily
-                  (brListMap (noLoc . synifyAxBranch tc) branches)
+              ClosedSynFamilyTyCon mb -> case mb of
+                  Just (CoAxiom { co_ax_branches = branches })
+                          -> return $ ClosedTypeFamily $
+                               brListMap (noLoc . synifyAxBranch tc) branches
+                  Nothing -> return $ ClosedTypeFamily []
               BuiltInSynFamTyCon {} -> return $ ClosedTypeFamily []
               AbstractClosedSynFamilyTyCon {} -> return $ ClosedTypeFamily []
-              EmptyClosedSynFamilyTyCon {}    -> return $ ClosedTypeFamily []
         in info >>= \i ->
            return (FamDecl
                    (FamilyDecl { fdInfo = i
