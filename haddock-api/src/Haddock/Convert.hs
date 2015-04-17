@@ -131,7 +131,7 @@ synifyAxiom ax@(CoAxiom { co_ax_tc = tc })
                     (TyFamInstDecl { tfid_eqn = noLoc $ synifyAxBranch tc branch
                                    , tfid_fvs = placeHolderNamesTc }))
 
-  | Just ax' <- isClosedSynFamilyTyCon_maybe tc
+  | Just ax' <- isClosedSynFamilyTyConWithAxiom_maybe tc
   , getUnique ax' == getUnique ax   -- without the getUniques, type error
   = synifyTyCon (Just ax) tc >>= return . TyClD
 
@@ -170,11 +170,13 @@ synifyTyCon coax tc
               OpenSynFamilyTyCon -> return OpenTypeFamily
               ClosedSynFamilyTyCon mb -> case mb of
                   Just (CoAxiom { co_ax_branches = branches })
-                          -> return $ ClosedTypeFamily $
+                          -> return $ ClosedTypeFamily $ Just $
                                brListMap (noLoc . synifyAxBranch tc) branches
-                  Nothing -> return $ ClosedTypeFamily []
-              BuiltInSynFamTyCon {} -> return $ ClosedTypeFamily []
-              AbstractClosedSynFamilyTyCon {} -> return $ ClosedTypeFamily []
+                  Nothing -> return $ ClosedTypeFamily $ Just []
+              BuiltInSynFamTyCon {}
+                -> return $ ClosedTypeFamily $ Just []
+              AbstractClosedSynFamilyTyCon {}
+                -> return $ ClosedTypeFamily Nothing
         in info >>= \i ->
            return (FamDecl
                    (FamilyDecl { fdInfo = i
