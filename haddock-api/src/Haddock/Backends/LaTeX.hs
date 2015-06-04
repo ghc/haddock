@@ -393,22 +393,24 @@ ppTypeOrFunSig _ _ typ (doc, argDocs) (pref1, pref2, sep0)
      arg_doc n = rDoc . fmap _doc $ Map.lookup n argDocs
 
      do_args :: Int -> LaTeX -> (HsType DocName) -> LaTeX
-     do_args n leader (HsForAllTy Explicit _ tvs lctxt ltype)
+     do_args n leader (HsForAllTy (HSF { hsf_flag = flag, hsf_qtvs = tvs, hsf_ctxt = lctxt })
+                                  ltype)
+       | Explicit <- flag
        = decltt leader <->
              decltt (hsep (forallSymbol unicode : ppTyVars tvs ++ [dot]) <+>
                 ppLContextNoArrow lctxt unicode) <+> nl $$
          do_largs n (darrow unicode) ltype
 
-     do_args n leader (HsForAllTy Qualified e a lctxt ltype)
-       = do_args n leader (HsForAllTy Implicit e a lctxt ltype)
-     do_args n leader (HsForAllTy Implicit _ _ lctxt ltype)
+       -- So hsf_flag is Implicit or Qualified
        | not (null (unLoc lctxt))
        = decltt leader <-> decltt (ppLContextNoArrow lctxt unicode) <+> nl $$
          do_largs n (darrow unicode) ltype
          -- if we're not showing any 'forall' or class constraints or
          -- anything, skip having an empty line for the context.
+
        | otherwise
        = do_largs n leader ltype
+
      do_args n leader (HsFunTy lt r)
        = decltt leader <-> decltt (ppLFunLhType unicode lt) <-> arg_doc n <+> nl $$
          do_largs (n+1) (arrow unicode) r
@@ -895,7 +897,10 @@ ppr_mono_lty ctxt_prec ty unicode = ppr_mono_ty ctxt_prec (unLoc ty) unicode
 
 
 ppr_mono_ty :: Int -> HsType DocName -> Bool -> LaTeX
-ppr_mono_ty ctxt_prec (HsForAllTy expl extra tvs ctxt ty) unicode
+ppr_mono_ty ctxt_prec (HsForAllTy (HSF { hsf_flag = expl, hsf_extra = extra
+                                       , hsf_qtvs = tvs, hsf_ctxt = ctxt })
+                                  ty)
+            unicode
   = maybeParen ctxt_prec pREC_FUN $
     hsep [ppForAll expl tvs ctxt' unicode, ppr_mono_lty pREC_TOP ty unicode]
  where ctxt' = case extra of

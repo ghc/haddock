@@ -182,11 +182,13 @@ renameMaybeLKind = traverse renameLKind
 
 renameType :: HsType Name -> RnM (HsType DocName)
 renameType t = case t of
-  HsForAllTy expl extra tyvars lcontext ltype -> do
+  HsForAllTy (HSF { hsf_flag = expl, hsf_extra = extra
+                  , hsf_qtvs =  tyvars, hsf_ctxt =  lcontext }) ltype -> do
     tyvars'   <- renameLTyVarBndrs tyvars
     lcontext' <- renameLContext lcontext
     ltype'    <- renameLType ltype
-    return (HsForAllTy expl extra tyvars' lcontext' ltype')
+    return (HsForAllTy (HSF { hsf_flag = expl, hsf_extra = extra
+                            , hsf_qtvs = tyvars', hsf_ctxt = lcontext' }) ltype')
 
   HsTyVar n -> return . HsTyVar =<< rename n
   HsBangTy b ltype -> return . HsBangTy b =<< renameLType ltype

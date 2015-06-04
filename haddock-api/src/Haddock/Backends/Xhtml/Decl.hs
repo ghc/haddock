@@ -132,7 +132,7 @@ ppTypeOrFunSig summary links loc docnames typ (doc, argDocs) (pref1, pref2, sep)
 
     do_largs n leader (L _ t) = do_args n leader t
     do_args :: Int -> Html -> HsType DocName -> [SubDecl]
-    do_args n leader (HsForAllTy _ _ tvs lctxt ltype)
+    do_args n leader (HsForAllTy (HSF { hsf_qtvs = tvs, hsf_ctxt = lctxt }) ltype)
       = case unLoc lctxt of
         [] -> do_largs n leader' ltype
         _  -> (leader' <+> ppLContextNoArrow lctxt unicode qual, Nothing, [])
@@ -849,7 +849,10 @@ ppr_mono_lty ctxt_prec ty = ppr_mono_ty ctxt_prec (unLoc ty)
 
 
 ppr_mono_ty :: Int -> HsType DocName -> Unicode -> Qualification -> Html
-ppr_mono_ty ctxt_prec (HsForAllTy expl extra tvs ctxt ty) unicode qual
+ppr_mono_ty ctxt_prec (HsForAllTy (HSF { hsf_flag = expl, hsf_extra = extra
+                                       , hsf_qtvs = tvs, hsf_ctxt = ctxt })
+                                  ty)
+            unicode qual
   = maybeParen ctxt_prec pREC_FUN $ ppForAllCon expl tvs ctxt' unicode qual
                                     <+> ppr_mono_lty pREC_TOP ty unicode qual
  where ctxt' = case extra of

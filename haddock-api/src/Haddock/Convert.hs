@@ -380,7 +380,8 @@ synifyType s forallty@(ForAllTy _tv _ty) =
       sCtx = synifyCtx ctx
       sTau = synifyType WithinType tau
       mkHsForAllTy forallPlicitness =
-        noLoc $ HsForAllTy forallPlicitness Nothing sTvs sCtx sTau
+        noLoc $ HsForAllTy (HSF { hsf_flag = forallPlicitness, hsf_extra = Nothing
+                                , hsf_qtvs = sTvs, hsf_ctxt = sCtx }) sTau
   in case s of
     DeleteTopLevelQuantification -> synifyType ImplicitizeForAll tau
     WithinType -> mkHsForAllTy Explicit

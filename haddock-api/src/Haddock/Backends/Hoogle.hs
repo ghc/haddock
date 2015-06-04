@@ -64,7 +64,7 @@ dropHsDocTy :: HsType a -> HsType a
 dropHsDocTy = f
     where
         g (L src x) = L src (f x)
-        f (HsForAllTy a b c d e) = HsForAllTy a b c d (g e)
+        f (HsForAllTy hsf e) = HsForAllTy hsf (g e)
         f (HsBangTy a b) = HsBangTy a (g b)
         f (HsAppTy a b) = HsAppTy (g a) (g b)
         f (HsFunTy a b) = HsFunTy (g a) (g b)
@@ -82,7 +82,7 @@ outHsType dflags = out dflags . dropHsDocTy
 
 
 makeExplicit :: HsType a -> HsType a
-makeExplicit (HsForAllTy _ a b c d) = HsForAllTy Explicit a b c d
+makeExplicit (HsForAllTy hsf ty) = HsForAllTy (hsf { hsf_flag = Explicit }) ty
 makeExplicit x = x
 
 makeExplicitL :: LHsType a -> LHsType a
@@ -133,8 +133,7 @@ ppSig dflags (TypeSig names sig _)
     where
         prettyNames = intercalate ", " $ map (out dflags) names
         typ = case unL sig of
-                   HsForAllTy Explicit a b c d  -> HsForAllTy Implicit a b c d
-                   HsForAllTy Qualified a b c d -> HsForAllTy Implicit a b c d
+                   HsForAllTy hsf ty -> HsForAllTy (hsf { hsf_flag = Implicit }) ty
                    x -> x
 ppSig _ _ = []
 
@@ -148,8 +147,10 @@ ppClass dflags x = out dflags x{tcdSigs=[]} :
         addContext (MinimalSig src sig) = MinimalSig src sig
         addContext _ = error "expected TypeSig"
 
-        f (HsForAllTy a b c con d) = HsForAllTy a b c (reL (context : unLoc con)) d
-        f t = HsForAllTy Implicit Nothing emptyHsQTvs (reL [context]) (reL t)
+        f (HsForAllTy hsf d) = HsForAllTy (hsf { hsf_ctxt = reL (context : unLoc (hsf_ctxt hsf)) }) d
+        f t = HsForAllTy (HSF { hsf_flag = Implicit, hsf_extra = Nothing
+                              , hsf_qtvs = emptyHsQTvs, hsf_ctxt = reL [context] })
+                         (reL t)
 
         context = nlHsTyConApp (tcdName x)
             (map (reL . HsTyVar . hsTyVarName . unL) (hsQTvBndrs (tyClDeclTyVars x)))

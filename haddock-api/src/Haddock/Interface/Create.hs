@@ -351,7 +351,7 @@ typeDocs d =
     TyClD (SynDecl { tcdRhs = ty }) -> docs (unLoc ty)
     _ -> M.empty
   where
-    go n (HsForAllTy _ _ _ _ ty) = go n (unLoc ty)
+    go n (HsForAllTy _ ty) = go n (unLoc ty)
     go n (HsFunTy (L _ (HsDocTy _ (L _ x))) (L _ ty)) = M.insert n x $ go (n+1) ty
     go n (HsFunTy _ ty) = go (n+1) (unLoc ty)
     go n (HsDocTy _ (L _ doc)) = M.singleton n doc
@@ -803,12 +803,13 @@ toTypeNoLoc = noLoc . HsTyVar . unLoc
 
 extractClassDecl :: Name -> [Located Name] -> LSig Name -> LSig Name
 extractClassDecl c tvs0 (L pos (TypeSig lname ltype _)) = case ltype of
-  L _ (HsForAllTy expl _ tvs (L _ preds) ty) ->
-    L pos (TypeSig lname (noLoc (HsForAllTy expl Nothing tvs (lctxt preds) ty)) [])
-  _ -> L pos (TypeSig lname (noLoc (HsForAllTy Implicit Nothing emptyHsQTvs (lctxt []) ltype)) [])
+  L _ (HsForAllTy hsf ty)
+    -> L pos (TypeSig lname (noLoc (HsForAllTy (hsf { hsf_ctxt = lctxt (unLoc (hsf_ctxt hsf)) }) ty))  [])
+  _ -> L pos (TypeSig lname (noLoc (HsForAllTy simple_hsf                                        ltype)) [])
   where
-    lctxt = noLoc . ctxt
+    lctxt preds = noLoc (ctxt preds)
     ctxt preds = nlHsTyConApp c (map toTypeNoLoc tvs0) : preds
+    simple_hsf = HSF { hsf_flag = Implicit, hsf_extra = Nothing, hsf_qtvs = emptyHsQTvs, hsf_ctxt = lctxt [] }
 extractClassDecl _ _ _ = error "extractClassDecl: unexpected decl"
 
 
