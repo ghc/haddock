@@ -795,7 +795,7 @@ extractDecl name mdl decl
             getConDeclDetails :: LConDecl Name -> HsConDeclDetails Name
             getConDeclDetails (L _ ConDeclH98 { con_details = details}) = details
             getConDeclDetails (L _ ConDeclGADT { con_type = ty       }) = details
-              where (details,_,_) = gadtDeclDetails ty
+              where (details,_,_,_) = gadtDeclDetails ty
         in case matches of
           [d0] -> extractDecl name mdl (noLoc . InstD $ DataFamInstD d0)
           _ -> error "internal: extractDecl (ClsInstD)"

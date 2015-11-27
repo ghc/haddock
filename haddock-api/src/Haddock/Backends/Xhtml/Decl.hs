@@ -40,7 +40,6 @@ import Name
 import BooleanFormula
 import RdrName ( rdrNameOcc, mkRdrUnqual )
 import PrelNames            ( mkUnboundName )
-import RdrHsSyn  ( gadtDeclDetails )
 
 ppDecl :: Bool -> LinksInfo -> LHsDecl DocName
        -> DocForDecl DocName -> [DocInstance DocName] -> [(DocName, Fixity)]
