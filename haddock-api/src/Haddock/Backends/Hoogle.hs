@@ -166,8 +166,9 @@ lookupCon dflags subdocs (L _ name) = case lookup name subdocs of
   _ -> []
 
 ppCtor :: DynFlags -> TyClDecl Name -> [(Name, DocForDecl Name)] -> ConDecl Name -> [String]
-ppCtor dflags dat subdocs con
-   = concatMap (lookupCon dflags subdocs) (con_names con) ++ f (con_details con)
+ppCtor dflags dat subdocs con@ConDeclH98 {}
+  -- AZ:TODO get rid of the concatMap
+   = concatMap (lookupCon dflags subdocs) [con_name con] ++ f (con_details con)
     where
         f (PrefixCon args) = [typeSig name $ args ++ [resType]]
         f (InfixCon a1 a2) = f $ PrefixCon [a1,a2]
@@ -182,10 +183,16 @@ ppCtor dflags dat subdocs con
         typeSig nm flds = operator nm ++ " :: " ++ outHsType dflags (unL $ funs flds)
         name = out dflags $ map unL $ con_names con
 
-        resType = case con_res con of
-            ResTyH98 -> apps $ map (reL . HsTyVar . reL) $
+        resType = apps $ map (reL . HsTyVar . reL) $
                         (tcdName dat) : [hsTyVarName v | L _ v@(UserTyVar _) <- hsQTvBndrs $ tyClDeclTyVars dat]
-            ResTyGADT _ x -> x
+
+ppCtor dflags _dat subdocs con@ConDeclGADT {}
+   = concatMap (lookupCon dflags subdocs) (con_names con) ++ f
+    where
+        f = [typeSig name (hsib_body $ con_type con)]
+
+        typeSig nm ty = operator nm ++ " :: " ++ outHsType dflags (unL ty)
+        name = out dflags $ map unL $ con_names con
 
 
 ---------------------------------------------------------------------

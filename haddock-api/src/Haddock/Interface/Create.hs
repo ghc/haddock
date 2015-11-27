@@ -47,6 +47,7 @@ import TcRnTypes
 import FastString (concatFS)
 import BasicTypes ( StringLiteral(..) )
 import qualified Outputable as O
+import RdrHsSyn ( gadtDeclDetails )
 
 -- | Use a 'TypecheckedModule' to produce an 'Interface'.
 -- To do this, we need access to already processed modules in the topological
@@ -785,11 +786,16 @@ extractDecl name mdl decl
         SigD <$> extractRecSel name mdl n tys (dd_cons defn)
       InstD (ClsInstD ClsInstDecl { cid_datafam_insts = insts }) ->
         let matches = [ d | L _ d <- insts
-                          , L _ ConDecl { con_details = RecCon rec } <- dd_cons (dfid_defn d)
+                          -- , L _ ConDecl { con_details = RecCon rec } <- dd_cons (dfid_defn d)
+                          , RecCon rec <- map getConDeclDetails (dd_cons (dfid_defn d))
                           , ConDeclField { cd_fld_names = ns } <- map unLoc (unLoc rec)
                           , L _ n <- ns
                           , selectorFieldOcc n == name
                       ]
+            getConDeclDetails :: LConDecl Name -> HsConDeclDetails Name
+            getConDeclDetails (L _ ConDeclH98 { con_details = details}) = details
+            getConDeclDetails (L _ ConDeclGADT { con_type = ty       }) = details
+              where (details,_,_) = gadtDeclDetails ty
         in case matches of
           [d0] -> extractDecl name mdl (noLoc . InstD $ DataFamInstD d0)
           _ -> error "internal: extractDecl (ClsInstD)"
@@ -809,7 +815,8 @@ extractRecSel nm mdl t tvs (L _ con : rest) =
   matching_fields flds = [ (l,f) | f@(L _ (ConDeclField ns _ _)) <- flds
                                  , L l n <- ns, selectorFieldOcc n == nm ]
   data_ty
-    | ResTyGADT _ ty <- con_res con = ty
+    -- | ResTyGADT _ ty <- con_res con = ty
+    | ConDeclGADT{} <- con = hsib_body $ con_type con
     | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar (noLoc t))) tvs
 
 -- | Keep export items with docs.

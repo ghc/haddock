@@ -40,6 +40,7 @@ import Name
 import BooleanFormula
 import RdrName ( rdrNameOcc, mkRdrUnqual )
 import PrelNames            ( mkUnboundName )
+import RdrHsSyn  ( gadtDeclDetails )
 
 ppDecl :: Bool -> LinksInfo -> LHsDecl DocName
        -> DocForDecl DocName -> [DocInstance DocName] -> [(DocName, Fixity)]
@@ -539,11 +540,11 @@ ppShortDataDecl summary dataInst dataDecl unicode qual
 
   | [] <- cons = dataHeader
 
-  | [lcon] <- cons, ResTyH98 <- resTy,
+  | [lcon] <- cons, isH98,
     (cHead,cBody,cFoot) <- ppShortConstrParts summary dataInst (unLoc lcon) unicode qual
        = (dataHeader <+> equals <+> cHead) +++ cBody +++ cFoot
 
-  | ResTyH98 <- resTy = dataHeader
+  | isH98 = dataHeader
       +++ shortSubDecls dataInst (zipWith doConstr ('=':repeat '|') cons)
 
   | otherwise = (dataHeader <+> keyword "where")
@@ -557,7 +558,9 @@ ppShortDataDecl summary dataInst dataDecl unicode qual
     doGADTConstr con = ppShortConstr summary (unLoc con) unicode qual
 
     cons      = dd_cons (tcdDataDefn dataDecl)
-    resTy     = (con_res . unLoc . head) cons
+    isH98     = case unLoc (head cons) of
+                  ConDeclH98 {} -> True
+                  ConDeclGADT{} -> False
 
 
 ppDataDecl :: Bool -> LinksInfo -> [DocInstance DocName] -> [(DocName, Fixity)] ->
@@ -573,7 +576,9 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
   where
     docname   = tcdName dataDecl
     cons      = dd_cons (tcdDataDefn dataDecl)
-    resTy     = (con_res . unLoc . head) cons
+    isH98     = case unLoc (head cons) of
+                  ConDeclH98 {} -> True
+                  ConDeclGADT{} -> False
 
     header_ = topDeclElem links loc splice [docname] $
              ppDataHeader summary dataDecl unicode qual <+> whereBit <+> fix
@@ -582,9 +587,7 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
 
     whereBit
       | null cons = noHtml
-      | otherwise = case resTy of
-        ResTyGADT _ _ -> keyword "where"
-        _ -> noHtml
+      | otherwise = if isH98 then noHtml else keyword "where"
 
     constrBit = subConstructors qual
       [ ppSideBySideConstr subdocs subfixs unicode qual c
@@ -606,8 +609,8 @@ ppShortConstr summary con unicode qual = cHead <+> cBody <+> cFoot
 -- returns three pieces: header, body, footer so that header & footer can be
 -- incorporated into the declaration
 ppShortConstrParts :: Bool -> Bool -> ConDecl DocName -> Unicode -> Qualification -> (Html, Html, Html)
-ppShortConstrParts summary dataInst con unicode qual = case con_res con of
-  ResTyH98 -> case con_details con of
+ppShortConstrParts summary dataInst con unicode qual = case con of
+  ConDeclH98{} -> case con_details con of
     PrefixCon args ->
       (header_ unicode qual +++ hsep (ppOcc
             : map (ppLParendType unicode qual) args), noHtml, noHtml)
@@ -620,25 +623,12 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
             ppOccInfix, ppLParendType unicode qual arg2],
        noHtml, noHtml)
 
-  ResTyGADT _ resTy -> case con_details con of
-    -- prefix & infix could use hsConDeclArgTys if it seemed to
-    -- simplify the code.
-    PrefixCon args -> (doGADTCon args resTy, noHtml, noHtml)
-    -- display GADT records with the new syntax,
-    -- Constr :: (Context) => { field :: a, field2 :: b } -> Ty (a, b)
-    -- (except each field gets its own line in docs, to match
-    -- non-GADT records)
-    RecCon (L _ fields) -> (ppOcc <+> dcolon unicode <+>
-                            ppForAllCon forall_ ltvs lcontext unicode qual <+> char '{',
-                            doRecordFields fields,
-                            char '}' <+> arrow unicode <+> ppLType unicode qual resTy)
-    InfixCon arg1 arg2 -> (doGADTCon [arg1, arg2] resTy, noHtml, noHtml)
+  ConDeclGADT {} -> (ppOcc <+> dcolon unicode <+> ppLType unicode qual resTy,noHtml,noHtml)
 
   where
+    resTy = hsib_body (con_type con)
+
     doRecordFields fields = shortSubDecls dataInst (map (ppShortField summary unicode qual) (map unLoc fields))
-    doGADTCon args resTy = ppOcc <+> dcolon unicode <+> hsep [
-                             ppForAllCon forall_ ltvs lcontext unicode qual,
-                             ppLType unicode qual (foldr mkFunTy resTy args) ]
 
     header_  = ppConstrHdr forall_ tyVars context
     occ        = map (nameOccName . getName . unLoc) $ con_names con
@@ -651,12 +641,11 @@ ppShortConstrParts summary dataInst con unicode qual = case con_res con of
       [one] -> ppBinderInfix summary one
       _     -> hsep (punctuate comma (map (ppBinderInfix summary) occ))
 
-    ltvs     = con_qvars con
+    ltvs     = fromMaybe (HsQTvs PlaceHolder []) (con_qvars con)
     tyVars   = tyvarNames ltvs
-    lcontext = con_cxt con
-    context  = unLoc (con_cxt con)
-    forall_  = con_explicit con
-    mkFunTy a b = noLoc (HsFunTy a b)
+    lcontext = fromMaybe (noLoc []) (con_cxt con)
+    context  = unLoc lcontext
+    forall_  = False
 
 
 -- ppConstrHdr is for (non-GADT) existentials constructors' syntax
@@ -675,11 +664,11 @@ ppConstrHdr forall_ tvs ctxt unicode qual
 
 ppSideBySideConstr :: [(DocName, DocForDecl DocName)] -> [(DocName, Fixity)]
                    -> Unicode -> Qualification -> LConDecl DocName -> SubDecl
-ppSideBySideConstr subdocs fixities unicode qual (L loc con)
+ppSideBySideConstr subdocs fixities unicode qual (L _ con)
  = (decl, mbDoc, fieldPart)
  where
-    decl = case con_res con of
-      ResTyH98 -> case con_details con of
+    decl = case con of
+      ConDeclH98{} -> case con_details con of
         PrefixCon args ->
           hsep ((header_ +++ ppOcc)
             : map (ppLParendType unicode qual) args)
@@ -693,12 +682,9 @@ ppSideBySideConstr subdocs fixities unicode qual (L loc con)
             ppLParendType unicode qual arg2]
           <+> fixity
 
-      ResTyGADT _ resTy -> case con_details con of
-        -- prefix & infix could also use hsConDeclArgTys if it seemed to
-        -- simplify the code.
-        PrefixCon args -> doGADTCon args resTy
-        cd@(RecCon _) -> doGADTCon (hsConDeclArgTys cd) resTy
-        InfixCon arg1 arg2 -> doGADTCon [arg1, arg2] resTy
+      ConDeclGADT{} -> doGADTCon resTy
+
+    resTy = hsib_body (con_type con)
 
     fieldPart = case con_details con of
         RecCon (L _ fields) -> [doRecordFields fields]
@@ -707,17 +693,10 @@ ppSideBySideConstr subdocs fixities unicode qual (L loc con)
     doRecordFields fields = subFields qual
       (map (ppSideBySideField subdocs unicode qual) (map unLoc fields))
 
-    doGADTCon :: [LHsType DocName] -> Located (HsType DocName) -> Html
-    doGADTCon args resTy = ppOcc <+> dcolon unicode
-        <+> ppLType unicode qual (mk_forall $ mk_phi $
-                                  foldr mkFunTy resTy args)
+    doGADTCon :: Located (HsType DocName) -> Html
+    doGADTCon ty = ppOcc <+> dcolon unicode
+        <+> ppLType unicode qual ty
         <+> fixity
-
-    mk_phi ty | null context = ty
-              | otherwise    = L loc (HsQualTy (con_cxt con) ty)
-
-    mk_forall ty | con_explicit con = L loc (HsForAllTy (hsQTvBndrs ltvs) ty)
-                 | otherwise        = ty
 
     fixity  = ppFixities fixities qual
     header_ = ppConstrHdr forall_ tyVars context unicode qual
@@ -731,15 +710,13 @@ ppSideBySideConstr subdocs fixities unicode qual (L loc con)
       [one] -> ppBinderInfix False one
       _     -> hsep (punctuate comma (map (ppBinderInfix False) occ))
 
-    ltvs    = con_qvars con
-    tyVars  = tyvarNames (con_qvars con)
-    context = unLoc (con_cxt con)
-    forall_ = con_explicit con
+    tyVars  = tyvarNames (fromMaybe (HsQTvs PlaceHolder []) (con_qvars con))
+    context = unLoc (fromMaybe (noLoc []) (con_cxt con))
+    forall_ = False
     -- don't use "con_doc con", in case it's reconstructed from a .hi file,
     -- or also because we want Haddock to do the doc-parsing, not GHC.
     mbDoc = lookup (unLoc $ head $ con_names con) subdocs >>=
             combineDocumentation . fst
-    mkFunTy a b = noLoc (HsFunTy a b)
 
 
 ppSideBySideField :: [(DocName, DocForDecl DocName)] -> Unicode -> Qualification
@@ -851,6 +828,7 @@ ppKind unicode qual ki = ppr_mono_ty pREC_TOP ki unicode qual
 -- Drop top-level for-all type variables in user style
 -- since they are implicit in Haskell
 
+{- AZ:TODO remove: old, no longer needed
 ppForAllCon :: Bool -> LHsQTyVars DocName
             -> Located (HsContext DocName) -> Unicode -> Qualification -> Html
 ppForAllCon expl tvs cxt unicode qual =
@@ -865,6 +843,7 @@ ppLTyVarBndrs show_forall tvs unicode _qual
   | otherwise           = noHtml
   where
     tv_bndrs = hsQTvBndrs tvs
+-}
 
 ppForAllPart :: [LHsTyVarBndr DocName] -> Unicode -> Html
 ppForAllPart tvs unicode = hsep (forallSymbol unicode : ppTyVars tvs) +++ dot
