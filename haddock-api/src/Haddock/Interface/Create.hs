@@ -164,7 +164,7 @@ mkAliasMap dflags mRenamedSource =
     Just (_,impDecls,_,_) ->
       M.fromList $
       mapMaybe (\(SrcLoc.L _ impDecl) -> do
-        alias <- ideclAs impDecl
+        SrcLoc.L _ alias <- ideclAs impDecl
         return $
           (lookupModuleDyn dflags
              (fmap Module.fsToUnitId $
