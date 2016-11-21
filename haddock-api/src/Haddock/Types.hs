@@ -380,8 +380,8 @@ mkPseudoFamilyDecl (FamilyDecl { .. }) = PseudoFamilyDecl
     mkType (KindedTyVar (L loc name) lkind) =
         HsKindSig tvar lkind
       where
-        tvar = L loc (HsTyVar (L loc name))
-    mkType (UserTyVar name) = HsTyVar name
+        tvar = L loc (HsTyVar False (L loc name))
+    mkType (UserTyVar name) = HsTyVar False name
 
 
 -- | An instance head that may have documentation and a source location.

@@ -366,17 +366,17 @@ synifyPatSynSigType :: PatSyn -> LHsSigType Name
 synifyPatSynSigType ps = mkEmptyImplicitBndrs (synifyPatSynType ps)
 
 synifyType :: SynifyTypeState -> Type -> LHsType Name
-synifyType _ (TyVarTy tv) = noLoc $ HsTyVar $ noLoc (getName tv)
+synifyType _ (TyVarTy tv) = noLoc $ HsTyVar False $ noLoc (getName tv)
 synifyType _ (TyConApp tc tys)
   -- Use */# instead of TYPE 'Lifted/TYPE 'Unlifted (#473)
   | tc `hasKey` tYPETyConKey
   , [TyConApp lev []] <- tys
   , lev `hasKey` ptrRepLiftedDataConKey
-  = noLoc (HsTyVar (noLoc starKindTyConName))
+  = noLoc (HsTyVar False (noLoc starKindTyConName))
   | tc `hasKey` tYPETyConKey
   , [TyConApp lev []] <- tys
   , lev `hasKey` ptrRepUnliftedDataConKey
-  = noLoc (HsTyVar (noLoc unliftedTypeKindTyConName))
+  = noLoc (HsTyVar False (noLoc unliftedTypeKindTyConName))
   -- Use non-prefix tuple syntax where possible, because it looks nicer.
   | Just sort <- tyConTuple_maybe tc
   , tyConArity tc == length tys
@@ -400,7 +400,7 @@ synifyType _ (TyConApp tc tys)
   -- Most TyCons:
   | otherwise =
     foldl (\t1 t2 -> noLoc (HsAppTy t1 t2))
-      (noLoc $ HsTyVar $ noLoc (getName tc))
+      (noLoc $ HsTyVar False $ noLoc (getName tc))
       (map (synifyType WithinType) $
        filterOut isCoercionTy tys)
 synifyType s (AppTy t1 (CoercionTy {})) = synifyType s t1
