@@ -285,8 +285,8 @@ renameType (HsDocTy lt doc) = HsDocTy <$> renameLType lt <*> pure doc
 renameType (HsBangTy bang lt) = HsBangTy bang <$> renameLType lt
 renameType t@(HsRecTy _) = pure t
 renameType t@(HsCoreTy _) = pure t
-renameType (HsExplicitListTy ph ltys) =
-    HsExplicitListTy ph <$> renameLTypes ltys
+renameType (HsExplicitListTy ip ph ltys) =
+    HsExplicitListTy ip ph <$> renameLTypes ltys
 renameType (HsExplicitTupleTy phs ltys) =
     HsExplicitTupleTy phs <$> renameLTypes ltys
 renameType t@(HsTyLit _) = pure t

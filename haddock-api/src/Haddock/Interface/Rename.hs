@@ -262,7 +262,7 @@ renameType t = case t of
 
   HsRecTy a               -> HsRecTy <$> mapM renameConDeclFieldField a
   HsCoreTy a              -> pure (HsCoreTy a)
-  HsExplicitListTy  a b   -> HsExplicitListTy  a <$> mapM renameLType b
+  HsExplicitListTy i a b  -> HsExplicitListTy i a <$> mapM renameLType b
   HsExplicitTupleTy a b   -> HsExplicitTupleTy a <$> mapM renameLType b
   HsSpliceTy _ _          -> error "renameType: HsSpliceTy"
   HsWildCardTy a          -> HsWildCardTy <$> renameWildCardInfo a
