@@ -244,7 +244,7 @@ ppCtor dflags dat subdocs con@ConDeclH98 {}
         -- docs for con_names on why it is a list to begin with.
         name = commaSeparate dflags . map unL $ getConNames con
 
-        resType = apps $ map (reL . HsTyVar False . reL) $
+        resType = apps $ map (reL . HsTyVar NotPromoted . reL) $
                         (tcdName dat) : [hsTyVarName v | L _ v@(UserTyVar _) <- hsQTvExplicit $ tyClDeclTyVars dat]
 
 ppCtor dflags _dat subdocs con@ConDeclGADT {}
