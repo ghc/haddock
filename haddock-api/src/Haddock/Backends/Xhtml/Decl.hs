@@ -59,10 +59,10 @@ ppDecl summ links (L loc decl) (mbDoc, fnArgsDoc) instances fixities subdocs spl
 
 
 ppLFunSig :: Bool -> LinksInfo -> SrcSpan -> DocForDecl DocName ->
-             [Located DocName] -> LHsType DocName -> [(DocName, Fixity)] ->
+             [LEmbellished DocName] -> LHsType DocName -> [(DocName, Fixity)] ->
              Splice -> Unicode -> Qualification -> Html
 ppLFunSig summary links loc doc lnames lty fixities splice unicode qual =
-  ppFunSig summary links loc doc (map unLoc lnames) lty fixities
+  ppFunSig summary links loc doc (map unLocEmb lnames) lty fixities
            splice unicode qual
 
 ppFunSig :: Bool -> LinksInfo -> SrcSpan -> DocForDecl DocName ->
@@ -75,16 +75,16 @@ ppFunSig summary links loc doc docnames typ fixities splice unicode qual =
     pp_typ = ppLType unicode qual typ
 
 ppLPatSig :: Bool -> LinksInfo -> SrcSpan -> DocForDecl DocName ->
-             [Located DocName] -> LHsSigType DocName ->
+             [LEmbellished DocName] -> LHsSigType DocName ->
              [(DocName, Fixity)] ->
              Splice -> Unicode -> Qualification -> Html
 ppLPatSig summary links loc (doc, _argDocs) docnames typ fixities splice unicode qual
   | summary = pref1
-  | otherwise = topDeclElem links loc splice (map unLoc docnames) (pref1 <+> ppFixities fixities qual)
+  | otherwise = topDeclElem links loc splice (map unLocEmb docnames) (pref1 <+> ppFixities fixities qual)
                 +++ docSection Nothing qual doc
   where
     pref1 = hsep [ keyword "pattern"
-                 , hsep $ punctuate comma $ map (ppBinder summary . getOccName) docnames
+                 , hsep $ punctuate comma $ map (ppBinder summary . getOccName . unLEmb) docnames
                  , dcolon unicode
                  , ppLType unicode qual (hsSigType typ)
                  ]
@@ -477,7 +477,7 @@ ppShortClassDecl summary links (ClassDecl { tcdCtxt = lctxt, tcdLName = lname, t
                        [] splice unicode qual
               | L _ (TypeSig lnames typ) <- sigs
               , let doc = lookupAnySubdoc (head names) subdocs
-                    names = map unLoc lnames ]
+                    names = map unLocEmb lnames ]
               -- FIXME: is taking just the first name ok? Is it possible that
               -- there are different subdocs for different names in a single
               -- type signature?
@@ -528,20 +528,20 @@ ppClassDecl summary links instances fixities loc d subdocs
                                  subfixs = [ f | n <- names
                                                , f@(n',_) <- fixities
                                                , n == n' ]
-                                 names = map unLoc lnames ]
+                                 names = map unLocEmb lnames ]
                            -- FIXME: is taking just the first name ok? Is it possible that
                            -- there are different subdocs for different names in a single
                            -- type signature?
 
     minimalBit = case [ s | MinimalSig _ (L _ s) <- sigs ] of
       -- Miminal complete definition = every shown method
-      And xs : _ | sort [getName n | L _ (Var (L _ n)) <- xs] ==
-                   sort [getName n | TypeSig ns _ <- sigs, L _ n <- ns]
+      And xs : _ | sort [getName $ unEmb n | L _ (Var (L _ n)) <- xs] ==
+                   sort [getName $ unEmb n | TypeSig ns _ <- sigs, L _ n <- ns]
         -> noHtml
 
       -- Minimal complete definition = the only shown method
-      Var (L _ n) : _ | [getName n] ==
-                        [getName n' | L _ (TypeSig ns _) <- lsigs, L _ n' <- ns]
+      Var (L _ n) : _ | [getName $ unEmb n] ==
+                        [getName $ unEmb n' | L _ (TypeSig ns _) <- lsigs, L _ n' <- ns]
         -> noHtml
 
       -- Minimal complete definition = nothing
@@ -550,7 +550,7 @@ ppClassDecl summary links instances fixities loc d subdocs
       m : _  -> subMinimal $ ppMinimal False m
       _ -> noHtml
 
-    ppMinimal _ (Var (L _ n)) = ppDocName qual Prefix True n
+    ppMinimal _ (Var (L _ n)) = ppDocName qual Prefix True (unEmb n)
     ppMinimal _ (And fs) = foldr1 (\a b -> a+++", "+++b) $ map (ppMinimal True . unLoc) fs
     ppMinimal p (Or fs) = wrap $ foldr1 (\a b -> a+++" | "+++b) $ map (ppMinimal False . unLoc) fs
       where wrap | p = parens | otherwise = id
@@ -643,7 +643,7 @@ ppInstanceSigs :: LinksInfo -> Splice -> Unicode -> Qualification
               -> [Html]
 ppInstanceSigs links splice unicode qual sigs = do
     TypeSig lnames typ <- sigs
-    let names = map unLoc lnames
+    let names = map unLocEmb lnames
         L loc rtyp = hsSigWcType typ
     return $ ppSimpleSig links splice unicode qual loc names rtyp
 
@@ -730,7 +730,7 @@ ppDataDecl summary links instances fixities subdocs loc doc dataDecl
       [ ppSideBySideConstr subdocs subfixs unicode qual c
       | c <- cons
       , let subfixs = filter (\(n,_) -> any (\cn -> cn == n)
-                                     (map unLoc (getConNames (unLoc c)))) fixities
+                                     (map unLocEmb (getConNames (unLoc c)))) fixities
       ]
 
     instancesBit = ppInstances links (OriginData docname) instances
@@ -769,7 +769,7 @@ ppShortConstrParts summary dataInst con unicode qual = case con of
     doRecordFields fields = shortSubDecls dataInst (map (ppShortField summary unicode qual) (map unLoc fields))
 
     header_  = ppConstrHdr forall_ tyVars context
-    occ        = map (nameOccName . getName . unLoc) $ getConNames con
+    occ        = map (nameOccName . getName . unLocEmb) $ getConNames con
 
     ppOcc      = case occ of
       [one] -> ppBinder summary one
@@ -839,7 +839,7 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con)
 
     fixity  = ppFixities fixities qual
     header_ = ppConstrHdr forall_ tyVars context unicode qual
-    occ       = map (nameOccName . getName . unLoc) $ getConNames con
+    occ       = map (nameOccName . getName . unLocEmb) $ getConNames con
 
     ppOcc     = case occ of
       [one] -> ppBinder False one
@@ -854,14 +854,14 @@ ppSideBySideConstr subdocs fixities unicode qual (L _ con)
     forall_ = False
     -- don't use "con_doc con", in case it's reconstructed from a .hi file,
     -- or also because we want Haddock to do the doc-parsing, not GHC.
-    mbDoc = lookup (unLoc $ head $ getConNames con) subdocs >>=
+    mbDoc = lookup (unLocEmb $ head $ getConNames con) subdocs >>=
             combineDocumentation . fst
 
 
 ppSideBySideField :: [(DocName, DocForDecl DocName)] -> Unicode -> Qualification
                   -> ConDeclField DocName -> SubDecl
 ppSideBySideField subdocs unicode qual (ConDeclField names ltype _) =
-  (hsep (punctuate comma (map ((ppBinder False) . rdrNameOcc . unLoc . rdrNameFieldOcc . unLoc) names)) <+> dcolon unicode <+> ppLType unicode qual ltype,
+  (hsep (punctuate comma (map ((ppBinder False) . rdrNameOcc . unLocEmb . rdrNameFieldOcc . unLoc) names)) <+> dcolon unicode <+> ppLType unicode qual ltype,
     mbDoc,
     [])
   where
@@ -872,7 +872,7 @@ ppSideBySideField subdocs unicode qual (ConDeclField names ltype _) =
 
 ppShortField :: Bool -> Unicode -> Qualification -> ConDeclField DocName -> Html
 ppShortField summary unicode qual (ConDeclField names ltype _)
-  = hsep (punctuate comma (map ((ppBinder summary) . rdrNameOcc . unLoc . rdrNameFieldOcc . unLoc) names))
+  = hsep (punctuate comma (map ((ppBinder summary) . rdrNameOcc . unLocEmb . rdrNameFieldOcc . unLoc) names))
     <+> dcolon unicode <+> ppLType unicode qual ltype
 
 
@@ -985,11 +985,11 @@ ppr_mono_ty ctxt_prec (HsQualTy ctxt ty) unicode qual
 
 -- UnicodeSyntax alternatives
 ppr_mono_ty _ (HsTyVar _ (L _ name)) True _
-  | getOccString (getName name) == "*"    = toHtml "★"
-  | getOccString (getName name) == "(->)" = toHtml "(→)"
+  | getOccString (getName $ unEmb name) == "*"    = toHtml "★"
+  | getOccString (getName $ unEmb name) == "(->)" = toHtml "(→)"
 
 ppr_mono_ty _         (HsBangTy b ty)     u q = ppBang b +++ ppLParendType u q ty
-ppr_mono_ty _         (HsTyVar _ (L _ name)) _ q = ppDocName q Prefix True name
+ppr_mono_ty _         (HsTyVar _ (L _ name)) _ q = ppDocName q Prefix True (unEmb name)
 ppr_mono_ty ctxt_prec (HsFunTy ty1 ty2)   u q = ppr_fun_ty ctxt_prec ty1 ty2 u q
 ppr_mono_ty _         (HsTupleTy con tys) u q = tupleParens con (map (ppLType u q) tys)
 ppr_mono_ty _         (HsSumTy tys) u q = sumParens (map (ppLType u q) tys)

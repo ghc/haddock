@@ -27,6 +27,7 @@ import Parser (parseIdentifier)
 import RdrName (RdrName)
 import SrcLoc (mkRealSrcLoc, unLoc)
 import StringBuffer (stringToStringBuffer)
+import HsEmbellished ( unLocEmb )
 
 parseParas :: DynFlags -> String -> MetaDoc mod RdrName
 parseParas d = overDoc (P.overIdentifier (parseIdent d)) . P.parseParas
@@ -40,5 +41,5 @@ parseIdent dflags str0 =
       realSrcLc = mkRealSrcLoc (mkFastString "<unknown file>") 0 0
       pstate = mkPState dflags buffer realSrcLc
   in case unP parseIdentifier pstate of
-    POk _ name -> Just (unLoc name)
+    POk _ name -> Just (unLocEmb name)
     _ -> Nothing

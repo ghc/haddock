@@ -77,19 +77,19 @@ filterLSigNames :: (name -> Bool) -> LSig name -> Maybe (LSig name)
 filterLSigNames p (L loc sig) = L loc <$> (filterSigNames p sig)
 
 filterSigNames :: (name -> Bool) -> Sig name -> Maybe (Sig name)
-filterSigNames p orig@(SpecSig n _ _)          = ifTrueJust (p $ unLoc n) orig
-filterSigNames p orig@(InlineSig n _)          = ifTrueJust (p $ unLoc n) orig
+filterSigNames p orig@(SpecSig n _ _)          = ifTrueJust (p $ unLocEmb n) orig
+filterSigNames p orig@(InlineSig n _)          = ifTrueJust (p $ unLocEmb n) orig
 filterSigNames p (FixSig (FixitySig ns ty)) =
-  case filter (p . unLoc) ns of
+  case filter (p . unLocEmb) ns of
     []       -> Nothing
     filtered -> Just (FixSig (FixitySig filtered ty))
 filterSigNames _ orig@(MinimalSig _ _)      = Just orig
 filterSigNames p (TypeSig ns ty) =
-  case filter (p . unLoc) ns of
+  case filter (p . unLocEmb) ns of
     []       -> Nothing
     filtered -> Just (TypeSig filtered ty)
 filterSigNames p (ClassOpSig is_default ns ty) =
-  case filter (p . unLoc) ns of
+  case filter (p . unLocEmb) ns of
     []       -> Nothing
     filtered -> Just (ClassOpSig is_default filtered ty)
 filterSigNames _ _                           = Nothing
@@ -102,12 +102,12 @@ sigName :: LSig name -> [name]
 sigName (L _ sig) = sigNameNoLoc sig
 
 sigNameNoLoc :: Sig name -> [name]
-sigNameNoLoc (TypeSig      ns _)       = map unLoc ns
-sigNameNoLoc (ClassOpSig _ ns _)       = map unLoc ns
-sigNameNoLoc (PatSynSig    ns _)       = map unLoc ns
-sigNameNoLoc (SpecSig      n _ _)      = [unLoc n]
-sigNameNoLoc (InlineSig    n _)        = [unLoc n]
-sigNameNoLoc (FixSig (FixitySig ns _)) = map unLoc ns
+sigNameNoLoc (TypeSig      ns _)       = map unLocEmb ns
+sigNameNoLoc (ClassOpSig _ ns _)       = map unLocEmb ns
+sigNameNoLoc (PatSynSig    ns _)       = map unLocEmb ns
+sigNameNoLoc (SpecSig      n _ _)      = [unLocEmb n]
+sigNameNoLoc (InlineSig    n _)        = [unLocEmb n]
+sigNameNoLoc (FixSig (FixitySig ns _)) = map unLocEmb ns
 sigNameNoLoc _                         = []
 
 -- | Was this signature given by the user?
@@ -172,11 +172,11 @@ instance Parent (ConDecl Name) where
 
 instance Parent (TyClDecl Name) where
   children d
-    | isDataDecl  d = map unL $ concatMap (getConNames . unL)
-                              $ (dd_cons . tcdDataDefn) $ d
+    | isDataDecl  d = map unLocEmb $ concatMap (getConNames . unL)
+                                   $ (dd_cons . tcdDataDefn) $ d
     | isClassDecl d =
         map (unL . fdLName . unL) (tcdATs d) ++
-        [ unL n | L _ (TypeSig ns _) <- tcdSigs d, n <- ns ]
+        [ unLocEmb n | L _ (TypeSig ns _) <- tcdSigs d, n <- ns ]
     | otherwise = []
 
 
@@ -186,7 +186,7 @@ family = getName &&& children
 
 
 familyConDecl :: ConDecl Name -> [(Name, [Name])]
-familyConDecl d = zip (map unL (getConNames d)) (repeat $ children d)
+familyConDecl d = zip (map unLocEmb (getConNames d)) (repeat $ children d)
 
 -- | A mapping from the parent (main-binder) to its children and from each
 -- child to its grand-children, recursively.

@@ -57,7 +57,7 @@ variables =
   where
     var term = case cast term of
         (Just (GHC.L sspan (GHC.HsVar name))) ->
-            pure (sspan, RtkVar (GHC.unLoc name))
+            pure (sspan, RtkVar (GHC.unLocEmb name))
         (Just (GHC.L _ (GHC.RecordCon (GHC.L sspan name) _ _ _))) ->
             pure (sspan, RtkVar name)
         _ -> empty
@@ -73,7 +73,7 @@ types =
   where
     ty term = case cast term of
         (Just (GHC.L sspan (GHC.HsTyVar _ name))) ->
-            pure (sspan, RtkType (GHC.unLoc name))
+            pure (sspan, RtkType (GHC.unLocEmb name))
         _ -> empty
 
 -- | Obtain details map for identifier bindings.
@@ -95,7 +95,7 @@ binds =
         (Just (GHC.L _ (GHC.ConPatIn (GHC.L sspan name) recs))) ->
             [(sspan, RtkVar name)] ++ everything (<|>) rec recs
         (Just (GHC.L _ (GHC.AsPat (GHC.L sspan name) _))) ->
-            pure (sspan, RtkBind name)
+            pure (sspan, RtkBind $ GHC.unEmb name)
         _ -> empty
     rec term = case cast term of
         (Just (GHC.HsRecField (GHC.L sspan name) (_ :: GHC.LPat GHC.Name) _)) ->
@@ -127,7 +127,7 @@ decls (group, _, _, _) = concatMap ($ group)
         _ -> empty
     con term = case cast term of
         (Just cdcl) ->
-            map decl (GHC.getConNames cdcl) ++ everything (<|>) fld cdcl
+            map (decl . GHC.unLEmb) (GHC.getConNames cdcl) ++ everything (<|>) fld cdcl
         Nothing -> empty
     ins term = case cast term of
         (Just (GHC.DataFamInstD inst)) -> pure . tyref $ GHC.dfid_tycon inst
@@ -138,7 +138,7 @@ decls (group, _, _, _) = concatMap ($ group)
         Just (field :: GHC.ConDeclField GHC.Name)
           -> map (decl . fmap GHC.selectorFieldOcc) $ GHC.cd_fld_names field
         Nothing -> empty
-    sig (GHC.L _ (GHC.TypeSig names _)) = map decl names
+    sig (GHC.L _ (GHC.TypeSig names _)) = map (decl . GHC.unLEmb)  names
     sig _ = []
     decl (GHC.L sspan name) = (sspan, RtkDecl name)
     tyref (GHC.L sspan name) = (sspan, RtkType name)

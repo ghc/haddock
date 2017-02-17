@@ -126,8 +126,8 @@ ppExport dflags ExportDecl { expItemDecl    = L _ decl
         f (TyClD d@DataDecl{})  = ppData dflags d subdocs
         f (TyClD d@SynDecl{})   = ppSynonym dflags d
         f (TyClD d@ClassDecl{}) = ppClass dflags d subdocs
-        f (ForD (ForeignImport name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
-        f (ForD (ForeignExport name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
+        f (ForD (ForeignImport name typ _ _)) = [pp_sig dflags [lEmb name] (hsSigType typ)]
+        f (ForD (ForeignExport name typ _ _)) = [pp_sig dflags [lEmb name] (hsSigType typ)]
         f (SigD sig) = ppSig dflags sig ++ ppFixities
         f _ = []
 
@@ -141,15 +141,15 @@ ppSigWithDoc dflags (TypeSig names sig) subdocs
         mkDocSig n = concatMap (ppDocumentation dflags) (getDoc n)
                      ++ [pp_sig dflags names (hsSigWcType sig)]
 
-        getDoc :: Located Name -> [Documentation Name]
-        getDoc n = maybe [] (return . fst) (lookup (unL n) subdocs)
+        getDoc :: LEmbellished Name -> [Documentation Name]
+        getDoc n = maybe [] (return . fst) (lookup (unLocEmb n) subdocs)
 
 ppSigWithDoc _ _ _ = []
 
 ppSig :: DynFlags -> Sig Name -> [String]
 ppSig dflags x  = ppSigWithDoc dflags x []
 
-pp_sig :: DynFlags -> [Located Name] -> LHsType Name -> String
+pp_sig :: DynFlags -> [LEmbellished Name] -> LHsType Name -> String
 pp_sig dflags names (L _ typ)  =
     operator prettyNames ++ " :: " ++ outHsType dflags typ
     where
@@ -219,8 +219,8 @@ ppData dflags decl@(DataDecl { tcdDataDefn = defn }) subdocs
 ppData _ _ _ = panic "ppData"
 
 -- | for constructors, and named-fields...
-lookupCon :: DynFlags -> [(Name, DocForDecl Name)] -> Located Name -> [String]
-lookupCon dflags subdocs (L _ name) = case lookup name subdocs of
+lookupCon :: DynFlags -> [(Name, DocForDecl Name)] -> LEmbellished Name -> [String]
+lookupCon dflags subdocs (L _ name) = case lookup (unEmb name) subdocs of
   Just (d, _) -> ppDocumentation dflags d
   _ -> []
 
@@ -232,7 +232,7 @@ ppCtor dflags dat subdocs con@ConDeclH98 {}
         f (PrefixCon args) = [typeSig name $ args ++ [resType]]
         f (InfixCon a1 a2) = f $ PrefixCon [a1,a2]
         f (RecCon (L _ recs)) = f (PrefixCon $ map cd_fld_type (map unLoc recs)) ++ concat
-                          [(concatMap (lookupCon dflags subdocs . noLoc . selectorFieldOcc . unLoc) (cd_fld_names r)) ++
+                          [(concatMap (lookupCon dflags subdocs . noEmb . selectorFieldOcc . unLoc) (cd_fld_names r)) ++
                            [out dflags (map (selectorFieldOcc . unLoc) $ cd_fld_names r) `typeSig` [resType, cd_fld_type r]]
                           | r <- map unLoc recs]
 
@@ -245,7 +245,7 @@ ppCtor dflags dat subdocs con@ConDeclH98 {}
         -- docs for con_names on why it is a list to begin with.
         name = commaSeparate dflags . map unL $ getConNames con
 
-        resType = apps $ map (reL . HsTyVar NotPromoted . reL) $
+        resType = apps $ map (reL . HsTyVar NotPromoted . noEmb) $
                         (tcdName dat) : [hsTyVarName v | L _ v@(UserTyVar _) <- hsQTvExplicit $ tyClDeclTyVars dat]
 
 ppCtor dflags _dat subdocs con@ConDeclGADT {}
@@ -258,7 +258,7 @@ ppCtor dflags _dat subdocs con@ConDeclGADT {}
 
 
 ppFixity :: DynFlags -> (Name, Fixity) -> [String]
-ppFixity dflags (name, fixity) = [out dflags (FixitySig [noLoc name] fixity)]
+ppFixity dflags (name, fixity) = [out dflags (FixitySig [noEmb name] fixity)]
 
 
 ---------------------------------------------------------------------

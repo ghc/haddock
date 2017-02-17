@@ -81,7 +81,7 @@ tyThingToLHsDecl t = case t of
          , tcdFDs = map (\ (l,r) -> noLoc
                         (map (noLoc . getName) l, map (noLoc . getName) r) ) $
                          snd $ classTvsFds cl
-         , tcdSigs = noLoc (MinimalSig NoSourceText . noLoc . fmap noLoc $ classMinimalDef cl) :
+         , tcdSigs = noLoc (MinimalSig NoSourceText . noLoc . fmap noEmb $ classMinimalDef cl) :
                       map (noLoc . synifyTcIdSig DeleteTopLevelQuantification)
                         (classMethods cl)
          , tcdMeths = emptyBag --ignore default method definitions, they don't affect signature
@@ -98,11 +98,11 @@ tyThingToLHsDecl t = case t of
   ACoAxiom ax -> synifyAxiom ax >>= allOK
 
   -- a data-constructor alone just gets rendered as a function:
-  AConLike (RealDataCon dc) -> allOK $ SigD (TypeSig [synifyName dc]
+  AConLike (RealDataCon dc) -> allOK $ SigD (TypeSig [synifyNameE dc]
     (synifySigWcType ImplicitizeForAll (dataConUserType dc)))
 
   AConLike (PatSynCon ps) ->
-    allOK . SigD $ PatSynSig [synifyName ps] (synifyPatSynSigType ps)
+    allOK . SigD $ PatSynSig [synifyNameE ps] (synifyPatSynSigType ps)
   where
     withErrs e x = return (e, x)
     allOK x = return (mempty, x)
@@ -270,7 +270,7 @@ synifyDataCon use_gadt_syntax dc =
   -- infix *syntax*.
   use_infix_syntax = dataConIsInfix dc
   use_named_field_syntax = not (null field_tys)
-  name = synifyName dc
+  name = synifyNameE dc
   -- con_qvars means a different thing depending on gadt-syntax
   (univ_tvs, ex_tvs, _eq_spec, theta, arg_tys, res_ty) = dataConFullSig dc
 
@@ -291,7 +291,7 @@ synifyDataCon use_gadt_syntax dc =
 
   field_tys = zipWith con_decl_field (dataConFieldLabels dc) linear_tys
   con_decl_field fl synTy = noLoc $
-    ConDeclField [noLoc $ FieldOcc (noLoc $ mkVarUnqual $ flLabel fl) (flSelector fl)] synTy
+    ConDeclField [noLoc $ FieldOcc (noEmb $ mkVarUnqual $ flLabel fl) (flSelector fl)] synTy
                  Nothing
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> Left "synifyDataCon: contradiction!"
@@ -319,12 +319,14 @@ synifyDataCon use_gadt_syntax dc =
 synifyName :: NamedThing n => n -> Located Name
 synifyName = noLoc . getName
 
+synifyNameE :: NamedThing n => n -> LEmbellished Name
+synifyNameE = noEmb . getName
 
 synifyIdSig :: SynifyTypeState -> Id -> Sig Name
-synifyIdSig s i = TypeSig [synifyName i] (synifySigWcType s (varType i))
+synifyIdSig s i = TypeSig [synifyNameE i] (synifySigWcType s (varType i))
 
 synifyTcIdSig :: SynifyTypeState -> Id -> Sig Name
-synifyTcIdSig s i = ClassOpSig False [synifyName i] (synifySigType s (varType i))
+synifyTcIdSig s i = ClassOpSig False [synifyNameE i] (synifySigType s (varType i))
 
 synifyCtx :: [PredType] -> LHsContext Name
 synifyCtx = noLoc . map (synifyType WithinType)
@@ -373,13 +375,13 @@ synifyPatSynSigType :: PatSyn -> LHsSigType Name
 synifyPatSynSigType ps = mkEmptyImplicitBndrs (synifyPatSynType ps)
 
 synifyType :: SynifyTypeState -> Type -> LHsType Name
-synifyType _ (TyVarTy tv) = noLoc $ HsTyVar NotPromoted $ noLoc (getName tv)
+synifyType _ (TyVarTy tv) = noLoc $ HsTyVar NotPromoted $ noEmb (getName tv)
 synifyType _ (TyConApp tc tys)
   -- Use */# instead of TYPE 'Lifted/TYPE 'Unlifted (#473)
   | tc `hasKey` tYPETyConKey
   , [TyConApp lev []] <- tys
   , lev `hasKey` liftedRepDataConKey
-  = noLoc (HsTyVar NotPromoted (noLoc starKindTyConName))
+  = noLoc (HsTyVar NotPromoted (noEmb starKindTyConName))
   -- Use non-prefix tuple syntax where possible, because it looks nicer.
   | Just sort <- tyConTuple_maybe tc
   , tyConArity tc == length tys
@@ -403,7 +405,7 @@ synifyType _ (TyConApp tc tys)
   -- Most TyCons:
   | otherwise =
     foldl (\t1 t2 -> noLoc (HsAppTy t1 t2))
-      (noLoc $ HsTyVar NotPromoted $ noLoc (getName tc))
+      (noLoc $ HsTyVar NotPromoted $ noEmb (getName tc))
       (map (synifyType WithinType) $
        filterOut isCoercionTy tys)
 synifyType s (AppTy t1 (CoercionTy {})) = synifyType s t1

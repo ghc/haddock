@@ -151,7 +151,7 @@ addClassContext _ _ sig = sig   -- E.g. a MinimalSig is fine
 
 lHsQTyVarsToTypes :: LHsQTyVars Name -> [LHsType Name]
 lHsQTyVarsToTypes tvs
-  = [ noLoc (HsTyVar NotPromoted (noLoc (hsLTyVarName tv)))
+  = [ noLoc (HsTyVar NotPromoted (noEmb (hsLTyVarName tv)))
     | tv <- hsQTvExplicit tvs ]
 
 --------------------------------------------------------------------------------
@@ -181,7 +181,7 @@ restrictDataDefn names defn@(HsDataDefn { dd_ND = new_or_data, dd_cons = cons })
 restrictCons :: [Name] -> [LConDecl Name] -> [LConDecl Name]
 restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
   where
-    keep d | any (\n -> n `elem` names) (map unLoc $ getConNames d) =
+    keep d | any (\n -> n `elem` names) (map unLocEmb $ getConNames d) =
       case getConDetails h98d of
         PrefixCon _ -> Just d
         RecCon fields

@@ -215,7 +215,7 @@ processExports (e : es) =
 isSimpleSig :: ExportItem DocName -> Maybe ([DocName], HsType DocName)
 isSimpleSig ExportDecl { expItemDecl = L _ (SigD (TypeSig lnames t))
                        , expItemMbDoc = (Documentation Nothing Nothing, argDocs) }
-  | Map.null argDocs = Just (map unLoc lnames, unLoc (hsSigWcType t))
+  | Map.null argDocs = Just (map unLocEmb lnames, unLoc (hsSigWcType t))
 isSimpleSig _ = Nothing
 
 
@@ -250,8 +250,8 @@ ppDocGroup lev doc = sec lev <> braces doc
 declNames :: LHsDecl DocName -> [DocName]
 declNames (L _ decl) = case decl of
   TyClD d  -> [tcdName d]
-  SigD (TypeSig lnames _ ) -> map unLoc lnames
-  SigD (PatSynSig lnames _) -> map unLoc lnames
+  SigD (TypeSig lnames _ ) -> map unLocEmb lnames
+  SigD (PatSynSig lnames _) -> map unLocEmb lnames
   ForD (ForeignImport (L _ n) _ _ _) -> [n]
   ForD (ForeignExport (L _ n) _ _ _) -> [n]
   _ -> error "declaration not supported by declNames"
@@ -294,10 +294,10 @@ ppDecl (L loc decl) (doc, fnArgsDoc) instances subdocs _fixities = case decl of
 --    | Just _  <- tcdTyPats d    -> ppTyInst False loc doc d unicode
 -- Family instances happen via FamInst now
   TyClD d@(ClassDecl {})    -> ppClassDecl instances loc doc subdocs d unicode
-  SigD (TypeSig lnames t)   -> ppFunSig loc (doc, fnArgsDoc) (map unLoc lnames)
+  SigD (TypeSig lnames t)   -> ppFunSig loc (doc, fnArgsDoc) (map unLocEmb lnames)
                                         (hsSigWcType t) unicode
   SigD (PatSynSig lnames ty) ->
-      ppLPatSig loc (doc, fnArgsDoc) (map unLoc lnames) ty unicode
+      ppLPatSig loc (doc, fnArgsDoc) (map unLocEmb lnames) ty unicode
   ForD d                         -> ppFor loc (doc, fnArgsDoc) d unicode
   InstD _                        -> empty
   DerivD _                       -> empty
@@ -508,7 +508,7 @@ ppClassDecl instances loc doc subdocs
       vcat  [ ppFunSig loc doc names (hsSigWcType typ) unicode
             | L _ (TypeSig lnames typ) <- lsigs
             , let doc = lookupAnySubdoc (head names) subdocs
-                  names = map unLoc lnames ]
+                  names = map unLocEmb lnames ]
               -- FIXME: is taking just the first name ok? Is it possible that
               -- there are different subdocs for different names in a single
               -- type signature?
@@ -638,7 +638,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con@(ConDeclH98 {})) =
 
 
     header_ = ppConstrHdr False tyVars context
-    occ     = map (nameOccName . getName . unLoc) $ getConNames con
+    occ     = map (nameOccName . getName . unLocEmb) $ getConNames con
     ppOcc   = case occ of
       [one] -> ppBinder one
       _     -> cat (punctuate comma (map ppBinder occ))
@@ -649,7 +649,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con@(ConDeclH98 {})) =
     -- or also because we want Haddock to do the doc-parsing, not GHC.
     mbDoc = case getConNames con of
               [] -> panic "empty con_names"
-              (cn:_) -> lookup (unLoc cn) subdocs >>=
+              (cn:_) -> lookup (unLocEmb cn) subdocs >>=
                         fmap _doc . combineDocumentation . fst
 
 ppSideBySideConstr subdocs unicode leader (L _ con@(ConDeclGADT {})) =
@@ -661,7 +661,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con@(ConDeclGADT {})) =
                                ppLType unicode resTy
                             ) <-> rDoc mbDoc
 
-    occ     = map (nameOccName . getName . unLoc) $ getConNames con
+    occ     = map (nameOccName . getName . unLocEmb) $ getConNames con
     ppOcc   = case occ of
       [one] -> ppBinder one
       _     -> cat (punctuate comma (map ppBinder occ))
@@ -670,7 +670,7 @@ ppSideBySideConstr subdocs unicode leader (L _ con@(ConDeclGADT {})) =
     -- or also because we want Haddock to do the doc-parsing, not GHC.
     mbDoc = case getConNames con of
               [] -> panic "empty con_names"
-              (cn:_) -> lookup (unLoc cn) subdocs >>=
+              (cn:_) -> lookup (unLocEmb cn) subdocs >>=
                         fmap _doc . combineDocumentation . fst
 {- old
 
@@ -741,7 +741,7 @@ ppSideBySideConstr subdocs unicode leader (L loc con) =
 
 ppSideBySideField :: [(DocName, DocForDecl DocName)] -> Bool -> ConDeclField DocName ->  LaTeX
 ppSideBySideField subdocs unicode (ConDeclField names ltype _) =
-  decltt (cat (punctuate comma (map (ppBinder . rdrNameOcc . unLoc . rdrNameFieldOcc . unLoc) names))
+  decltt (cat (punctuate comma (map (ppBinder . rdrNameOcc . unLocEmb . rdrNameFieldOcc . unLoc) names))
     <+> dcolon unicode <+> ppLType unicode ltype) <-> rDoc mbDoc
   where
     -- don't use cd_fld_doc for same reason we don't use con_doc above
@@ -949,8 +949,8 @@ ppr_mono_ty ctxt_prec (HsQualTy ctxt ty) unicode
         , ppr_mono_lty pREC_TOP ty unicode ]
 
 ppr_mono_ty _         (HsBangTy b ty)     u = ppBang b <> ppLParendType u ty
-ppr_mono_ty _         (HsTyVar NotPromoted (L _ name)) _ = ppDocName name
-ppr_mono_ty _         (HsTyVar Promoted    (L _ name)) _ = char '\'' <> ppDocName name
+ppr_mono_ty _         (HsTyVar NotPromoted (L _ name)) _ = ppDocName (unEmb name)
+ppr_mono_ty _         (HsTyVar Promoted    (L _ name)) _ = char '\'' <> ppDocName (unEmb name)
 ppr_mono_ty ctxt_prec (HsFunTy ty1 ty2)   u = ppr_fun_ty ctxt_prec ty1 ty2 u
 ppr_mono_ty _         (HsTupleTy con tys) u = tupleParens con (map (ppLType u) tys)
 ppr_mono_ty _         (HsSumTy tys) u       = sumParens (map (ppLType u) tys)

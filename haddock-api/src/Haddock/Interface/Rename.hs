@@ -146,6 +146,10 @@ rename = lookupRn
 renameL :: Located Name -> RnM (Located DocName)
 renameL = mapM rename
 
+renameLE :: LEmbellished Name -> RnM (LEmbellished DocName)
+renameLE le = do
+  n <- rename (unLocEmb le)
+  return (reLEmb le n)
 
 renameExportItems :: [ExportItem Name] -> RnM [ExportItem DocName]
 renameExportItems = mapM renameExportItem
@@ -219,7 +223,7 @@ renameType t = case t of
     ltype'    <- renameLType ltype
     return (HsQualTy { hst_ctxt = lcontext', hst_body = ltype' })
 
-  HsTyVar ip (L l n) -> return . HsTyVar ip . L l =<< rename n
+  HsTyVar ip ln -> renameLE ln >>= \ln' -> return $ HsTyVar ip ln'
   HsBangTy b ltype -> return . HsBangTy b =<< renameLType ltype
 
   HsAppTy a b -> do
@@ -428,7 +432,7 @@ renameCon :: ConDecl Name -> RnM (ConDecl DocName)
 renameCon decl@(ConDeclH98 { con_name = lname, con_qvars = ltyvars
                            , con_cxt = lcontext, con_details = details
                            , con_doc = mbldoc }) = do
-      lname'    <- renameL lname
+      lname'    <- renameLE lname
       ltyvars'  <- traverse renameLHsQTyVars ltyvars
       lcontext' <- traverse renameLContext lcontext
       details'  <- renameDetails details
@@ -449,7 +453,7 @@ renameCon decl@(ConDeclH98 { con_name = lname, con_qvars = ltyvars
 renameCon decl@(ConDeclGADT { con_names = lnames
                             , con_type = lty
                             , con_doc = mbldoc }) = do
-      lnames'   <- mapM renameL lnames
+      lnames'   <- mapM renameLE lnames
       lty'      <- renameLSigType lty
       mbldoc'   <- mapM renameLDocHsSyn mbldoc
       return (decl { con_names = lnames'
@@ -470,22 +474,22 @@ renameLFieldOcc (L l (FieldOcc lbl sel)) = do
 renameSig :: Sig Name -> RnM (Sig DocName)
 renameSig sig = case sig of
   TypeSig lnames ltype -> do
-    lnames' <- mapM renameL lnames
+    lnames' <- mapM renameLE lnames
     ltype' <- renameLSigWcType ltype
     return (TypeSig lnames' ltype')
   ClassOpSig is_default lnames sig_ty -> do
-    lnames' <- mapM renameL lnames
+    lnames' <- mapM renameLE lnames
     ltype' <- renameLSigType sig_ty
     return (ClassOpSig is_default lnames' ltype')
   PatSynSig lnames sig_ty -> do
-    lnames' <- mapM renameL lnames
+    lnames' <- mapM renameLE lnames
     sig_ty' <- renameLSigType sig_ty
     return $ PatSynSig lnames' sig_ty'
   FixSig (FixitySig lnames fixity) -> do
-    lnames' <- mapM renameL lnames
+    lnames' <- mapM renameLE lnames
     return $ FixSig (FixitySig lnames' fixity)
   MinimalSig src (L l s) -> do
-    s' <- traverse renameL s
+    s' <- traverse renameLE s
     return $ MinimalSig src (L l s')
   -- we have filtered out all other kinds of signatures in Interface.Create
   _ -> error "expected TypeSig"

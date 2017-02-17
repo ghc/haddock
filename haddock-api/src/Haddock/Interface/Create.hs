@@ -342,7 +342,7 @@ subordinates instMap decl = case decl of
     dataSubs dd = constrs ++ fields ++ derivs
       where
         cons = map unL $ (dd_cons dd)
-        constrs = [ (unL cname, maybeToList $ fmap unL $ con_doc c, M.empty)
+        constrs = [ (unLocEmb cname, maybeToList $ fmap unL $ con_doc c, M.empty)
                   | c <- cons, cname <- getConNames c ]
         fields  = [ (selectorFieldOcc n, maybeToList $ fmap unL doc, M.empty)
                   | RecCon flds <- map getConDetails cons
@@ -392,7 +392,7 @@ topDecls = filterClasses . filterDecls . collectDocs . sortByLoc . ungroup
 
 -- | Extract a map of fixity declarations only
 mkFixMap :: HsGroup Name -> FixMap
-mkFixMap group_ = M.fromList [ (n,f)
+mkFixMap group_ = M.fromList [ (unEmb n,f)
                              | L _ (FixitySig ns f) <- hs_fixds group_,
                                L _ n <- ns ]
 
@@ -569,7 +569,7 @@ mkExportItems
 
                   L loc (TyClD cl@ClassDecl{}) -> do
                     mdef <- liftGhcToErrMsgGhc $ minimalDef t
-                    let sig = maybeToList $ fmap (noLoc . MinimalSig NoSourceText . noLoc . fmap noLoc) mdef
+                    let sig = maybeToList $ fmap (noLoc . MinimalSig NoSourceText . noLoc . fmap noEmb) mdef
                     return [ mkExportDecl t
                       (L loc $ TyClD cl { tcdSigs = sig ++ tcdSigs cl }) docs_ ]
 
@@ -769,7 +769,7 @@ fullModuleContents dflags warnings gre (docMap, argMap, subMap, declMap, instMap
         expInst decl l name
     mkExportItem (L l (TyClD cl@ClassDecl{ tcdLName = L _ name, tcdSigs = sigs })) = do
       mdef <- liftGhcToErrMsgGhc $ minimalDef name
-      let sig = maybeToList $ fmap (noLoc . MinimalSig NoSourceText . noLoc . fmap noLoc) mdef
+      let sig = maybeToList $ fmap (noLoc . MinimalSig NoSourceText . noLoc . fmap noEmb) mdef
       expDecl (L l (TyClD cl { tcdSigs = sig ++ sigs })) l name
     mkExportItem decl@(L l d)
       | name:_ <- getMainDeclBinder d = expDecl decl l name
@@ -830,7 +830,7 @@ extractRecSel _ _ _ _ [] = error "extractRecSel: selector not found"
 extractRecSel nm mdl t tvs (L _ con : rest) =
   case getConDetails con of
     RecCon (L _ fields) | ((l,L _ (ConDeclField _nn ty _)) : _) <- matching_fields fields ->
-      L l (TypeSig [noLoc nm] (mkEmptySigWcType (noLoc (HsFunTy data_ty (getBangType ty)))))
+      L l (TypeSig [noEmb nm] (mkEmptySigWcType (noLoc (HsFunTy data_ty (getBangType ty)))))
     _ -> extractRecSel nm mdl t tvs rest
  where
   matching_fields :: [LConDeclField Name] -> [(SrcSpan, LConDeclField Name)]
@@ -839,7 +839,7 @@ extractRecSel nm mdl t tvs (L _ con : rest) =
   data_ty
     -- | ResTyGADT _ ty <- con_res con = ty
     | ConDeclGADT{} <- con = hsib_body $ con_type con
-    | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar NotPromoted (noLoc t))) tvs
+    | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar NotPromoted (noEmb t))) tvs
 
 -- | Keep export items with docs.
 pruneExportItems :: [ExportItem Name] -> [ExportItem Name]

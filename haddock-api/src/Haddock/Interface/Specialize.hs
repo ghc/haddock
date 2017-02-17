@@ -36,7 +36,7 @@ specialize :: (Eq name, Typeable name)
 specialize name details =
     everywhere $ mkT step
   where
-    step (HsTyVar _ (L _ name')) | name == name' = details
+    step (HsTyVar _ (L _ name')) | name == unEmb name' = details
     step typ = typ
 
 
@@ -126,7 +126,7 @@ sugarLists :: NamedThing name => HsType name -> HsType name
 sugarLists (HsAppTy (L _ (HsTyVar _ (L _ name))) ltyp)
     | isBuiltInSyntax name' && strName == "[]" = HsListTy ltyp
   where
-    name' = getName name
+    name' = getName $ unEmb name
     strName = occNameString . nameOccName $ name'
 sugarLists typ = typ
 
@@ -140,7 +140,7 @@ sugarTuples typ =
     aux apps (HsTyVar _ (L _ name))
         | isBuiltInSyntax name' && suitable = HsTupleTy HsBoxedTuple apps
       where
-        name' = getName name
+        name' = getName $ unEmb name
         strName = occNameString . nameOccName $ name'
         suitable = case parseTupleArity strName of
             Just arity -> arity == length apps
@@ -150,10 +150,10 @@ sugarTuples typ =
 
 sugarOperators :: NamedThing name => HsType name -> HsType name
 sugarOperators (HsAppTy (L _ (HsAppTy (L _ (HsTyVar _ (L l name))) la)) lb)
-    | isSymOcc $ getOccName name' = mkHsOpTy la (L l name) lb
-    | isBuiltInSyntax name' && getOccString name == "(->)" = HsFunTy la lb
+    | isSymOcc $ getOccName name' = mkHsOpTy la (L l (unEmb name)) lb
+    | isBuiltInSyntax name' && getOccString (unEmb name) == "(->)" = HsFunTy la lb
   where
-    name' = getName name
+    name' = getName $ unEmb name
 sugarOperators typ = typ
 
 
@@ -225,8 +225,8 @@ freeVariables =
         Just (HsForAllTy bndrs _) ->
             (Set.empty, Set.union ctx (bndrsNames bndrs))
         Just (HsTyVar _ (L _ name))
-            | getName name `Set.member` ctx -> (Set.empty, ctx)
-            | otherwise -> (Set.singleton $ getNameRep name, ctx)
+            | getName (unEmb name) `Set.member` ctx -> (Set.empty, ctx)
+            | otherwise -> (Set.singleton $ getNameRep $ unEmb name, ctx)
         _ -> (Set.empty, ctx)
     bndrsNames = Set.fromList . map (getName . tyVarName . unLoc)
 
@@ -267,7 +267,7 @@ renameType (HsQualTy lctxt lt) =
   HsQualTy
         <$> located renameContext lctxt
         <*> renameLType lt
-renameType (HsTyVar ip name) = HsTyVar ip <$> located renameName name
+renameType (HsTyVar ip name) = HsTyVar ip <$> located renameEName name
 renameType (HsAppTy lf la) = HsAppTy <$> renameLType lf <*> renameLType la
 renameType (HsFunTy la lr) = HsFunTy <$> renameLType la <*> renameLType lr
 renameType (HsListTy lt) = HsListTy <$> renameLType lt
@@ -316,6 +316,11 @@ renameName name = do
     RenameEnv { rneCtx = ctx } <- ask
     pure $ fromMaybe name (Map.lookup (getName name) ctx)
 
+renameEName :: SetName name => Embellished name -> Rename name (Embellished name)
+renameEName en = do
+  let n = unEmb en
+  n' <- renameName n
+  return (reEmb en n')
 
 rebind :: SetName name
        => [LHsTyVarBndr name] -> ([LHsTyVarBndr name] -> Rename name a)
