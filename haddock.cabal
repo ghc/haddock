@@ -1,5 +1,5 @@
 name:                 haddock
-version:              2.17.3
+version:              2.17.3.1
 synopsis:             A documentation-generation tool for Haskell libraries
 description:          Haddock is a documentation-generation tool for Haskell
                       libraries
@@ -119,7 +119,7 @@ executable haddock
       Haddock.Syb
       Haddock.Convert
   else
-    build-depends:  haddock-api == 2.17.*
+    build-depends:  haddock-api == 2.17.3.1
 
 source-repository head
   type:     git
