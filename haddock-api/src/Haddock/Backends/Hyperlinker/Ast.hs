@@ -118,11 +118,11 @@ binds = everythingInRenamedSource
             pure (sspan, RtkBind name)
         _ -> empty
     pat term = case cast term of
-        (Just ((GHC.L sspan (GHC.VarPat name)) :: GHC.LPat GHC.GhcRn)) ->
+        (Just ((GHC.L sspan (GHC.VarPat _ name)) :: GHC.LPat GHC.GhcRn)) ->
             pure (sspan, RtkBind (GHC.unLoc name))
         (Just (GHC.L _ (GHC.ConPatIn (GHC.L sspan name) recs))) ->
             [(sspan, RtkVar name)] ++ everythingInRenamedSource rec recs
-        (Just (GHC.L _ (GHC.AsPat (GHC.L sspan name) _))) ->
+        (Just (GHC.L _ (GHC.AsPat _ (GHC.L sspan name) _))) ->
             pure (sspan, RtkBind name)
         _ -> empty
     rec term = case cast term of
