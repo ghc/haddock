@@ -1052,9 +1052,9 @@ ppr_mono_ty _         (HsRecTy {})        _ _ _ = toHtml "{..}"
        -- placeholder in the signature, which is followed by the field
        -- declarations.
 ppr_mono_ty _         (NewHsType (NHsCoreTy {})) _ _ _ = error "ppr_mono_ty HsCoreTy"
-ppr_mono_ty _         (HsExplicitListTy _ Promoted _ tys) u q _ = promoQuote $ brackets $ hsep $ punctuate comma $ map (ppLType u q HideEmptyContexts) tys
-ppr_mono_ty _         (HsExplicitListTy _ NotPromoted _ tys) u q _ = brackets $ hsep $ punctuate comma $ map (ppLType u q HideEmptyContexts) tys
-ppr_mono_ty _         (HsExplicitTupleTy _ _ tys) u q _ = promoQuote $ parenList $ map (ppLType u q HideEmptyContexts) tys
+ppr_mono_ty _         (HsExplicitListTy _ Promoted tys) u q _ = promoQuote $ brackets $ hsep $ punctuate comma $ map (ppLType u q HideEmptyContexts) tys
+ppr_mono_ty _         (HsExplicitListTy _ NotPromoted tys) u q _ = brackets $ hsep $ punctuate comma $ map (ppLType u q HideEmptyContexts) tys
+ppr_mono_ty _         (HsExplicitTupleTy _ tys) u q _ = promoQuote $ parenList $ map (ppLType u q HideEmptyContexts) tys
 ppr_mono_ty _         (HsAppsTy {})       _ _ _ = error "ppr_mono_ty HsAppsTy"
 
 ppr_mono_ty ctxt_prec (HsEqTy _ ty1 ty2) unicode qual _
@@ -1083,7 +1083,7 @@ ppr_mono_ty ctxt_prec (HsParTy _ ty) unicode qual emptyCtxts
 ppr_mono_ty ctxt_prec (HsDocTy _ ty _) unicode qual emptyCtxts
   = ppr_mono_lty ctxt_prec ty unicode qual emptyCtxts
 
-ppr_mono_ty _ (HsWildCardTy _ (AnonWildCard _)) _ _ _ = char '_'
+ppr_mono_ty _ (HsWildCardTy (AnonWildCard _)) _ _ _ = char '_'
 ppr_mono_ty _ (HsTyLit _ n) _ _ _ = ppr_tylit n
 
 ppr_tylit :: HsTyLit -> Html

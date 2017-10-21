@@ -262,10 +262,10 @@ renameType t = case t of
 
   HsRecTy _ a               -> HsRecTy PlaceHolder <$> mapM renameConDeclFieldField a
   (NewHsType (NHsCoreTy a)) -> pure (NewHsType (NHsCoreTy a))
-  HsExplicitListTy x i a b  -> HsExplicitListTy x i a <$> mapM renameLType b
-  HsExplicitTupleTy x a b   -> HsExplicitTupleTy x a <$> mapM renameLType b
-  HsSpliceTy _ _ _          -> error "renameType: HsSpliceTy"
-  HsWildCardTy x a          -> HsWildCardTy x <$> renameWildCardInfo a
+  HsExplicitListTy x i b    -> HsExplicitListTy x i <$> mapM renameLType b
+  HsExplicitTupleTy x b     -> HsExplicitTupleTy x <$> mapM renameLType b
+  HsSpliceTy _ _            -> error "renameType: HsSpliceTy"
+  HsWildCardTy a            -> HsWildCardTy <$> renameWildCardInfo a
   HsAppsTy _ _              -> error "renameType: HsAppsTy"
 
 renameLHsQTyVars :: LHsQTyVars GhcRn -> RnM (LHsQTyVars DocNameI)

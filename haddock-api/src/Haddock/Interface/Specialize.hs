@@ -261,17 +261,17 @@ renameType (HsParTy x lt) = HsParTy x <$> renameLType lt
 renameType (HsIParamTy x ip lt) = HsIParamTy x ip <$> renameLType lt
 renameType (HsEqTy x la lb) = HsEqTy x <$> renameLType la <*> renameLType lb
 renameType (HsKindSig x lt lk) = HsKindSig x <$> renameLType lt <*> pure lk
-renameType t@(HsSpliceTy _ _ _) = pure t
+renameType t@(HsSpliceTy _ _) = pure t
 renameType (HsDocTy x lt doc) = HsDocTy x <$> renameLType lt <*> pure doc
 renameType (HsBangTy x bang lt) = HsBangTy x bang <$> renameLType lt
 renameType t@(HsRecTy _ _) = pure t
 renameType t@(NewHsType (NHsCoreTy _)) = pure t
-renameType (HsExplicitListTy x ip ph ltys) =
-    HsExplicitListTy x ip ph <$> renameLTypes ltys
-renameType (HsExplicitTupleTy x phs ltys) =
-    HsExplicitTupleTy x phs <$> renameLTypes ltys
+renameType (HsExplicitListTy x ip ltys) =
+    HsExplicitListTy x ip <$> renameLTypes ltys
+renameType (HsExplicitTupleTy x ltys) =
+    HsExplicitTupleTy x <$> renameLTypes ltys
 renameType t@(HsTyLit _ _) = pure t
-renameType (HsWildCardTy x wc) = pure (HsWildCardTy x wc)
+renameType (HsWildCardTy wc) = pure (HsWildCardTy wc)
 renameType (HsAppsTy _ _) = error "HsAppsTy: Only used before renaming"
 
 

@@ -979,9 +979,9 @@ ppr_mono_ty _         (HsIParamTy _ (L _ n) ty) u = brackets (ppIPName n <+> dco
 ppr_mono_ty _         (HsSpliceTy {})     _ = error "ppr_mono_ty HsSpliceTy"
 ppr_mono_ty _         (HsRecTy {})        _ = error "ppr_mono_ty HsRecTy"
 ppr_mono_ty _         (NewHsType (NHsCoreTy {}))  _ = error "ppr_mono_ty HsCoreTy"
-ppr_mono_ty _         (HsExplicitListTy _ Promoted _ tys) u = Pretty.quote $ brackets $ hsep $ punctuate comma $ map (ppLType u) tys
-ppr_mono_ty _         (HsExplicitListTy _ NotPromoted _ tys) u = brackets $ hsep $ punctuate comma $ map (ppLType u) tys
-ppr_mono_ty _         (HsExplicitTupleTy _ _ tys) u = Pretty.quote $ parenList $ map (ppLType u) tys
+ppr_mono_ty _         (HsExplicitListTy _ Promoted tys) u = Pretty.quote $ brackets $ hsep $ punctuate comma $ map (ppLType u) tys
+ppr_mono_ty _         (HsExplicitListTy _ NotPromoted tys) u = brackets $ hsep $ punctuate comma $ map (ppLType u) tys
+ppr_mono_ty _         (HsExplicitTupleTy _ tys) u = Pretty.quote $ parenList $ map (ppLType u) tys
 
 ppr_mono_ty ctxt_prec (HsEqTy _ ty1 ty2) unicode
   = maybeParen ctxt_prec pREC_OP $
@@ -1005,7 +1005,7 @@ ppr_mono_ty ctxt_prec (HsParTy _ ty) unicode
 ppr_mono_ty ctxt_prec (HsDocTy _ ty _) unicode
   = ppr_mono_lty ctxt_prec ty unicode
 
-ppr_mono_ty _ (HsWildCardTy _ (AnonWildCard _)) _ = char '_'
+ppr_mono_ty _ (HsWildCardTy (AnonWildCard _)) _ = char '_'
 
 ppr_mono_ty _ (HsTyLit _ t) u = ppr_tylit t u
 

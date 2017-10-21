@@ -698,5 +698,5 @@ type instance XRecTy           DocNameI = PlaceHolder
 type instance XExplicitListTy  DocNameI = PlaceHolder
 type instance XExplicitTupleTy DocNameI = PlaceHolder
 type instance XTyLit           DocNameI = PlaceHolder
-type instance XWildCardTy      DocNameI = PlaceHolder
+type instance XWildCardTy      DocNameI = HsWildCardInfo DocNameI
 type instance XNewType         DocNameI = NewHsTypeX
