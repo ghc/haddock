@@ -99,7 +99,7 @@ types :: GHC.RenamedSource -> LTokenDetails
 types = everythingInRenamedSource ty
   where
     ty term = case cast term of
-        (Just ((GHC.L sspan (GHC.HsTyVar _ name)) :: GHC.LHsType GHC.GhcRn)) ->
+        (Just ((GHC.L sspan (GHC.HsTyVar _ _ name)) :: GHC.LHsType GHC.GhcRn)) ->
             pure (sspan, RtkType (GHC.unLoc name))
         _ -> empty
 

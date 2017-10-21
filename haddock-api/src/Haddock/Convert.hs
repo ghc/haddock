@@ -288,7 +288,7 @@ synifyDataCon use_gadt_syntax dc =
                let tySyn = synifyType WithinType ty
                in case bang of
                     (HsSrcBang _ NoSrcUnpack NoSrcStrict) -> tySyn
-                    bang' -> noLoc $ HsBangTy bang' tySyn)
+                    bang' -> noLoc $ HsBangTy PlaceHolder bang' tySyn)
             arg_tys (dataConSrcBangs dc)
 
   field_tys = zipWith con_decl_field (dataConFieldLabels dc) linear_tys
@@ -375,59 +375,62 @@ synifyPatSynSigType :: PatSyn -> LHsSigType GhcRn
 synifyPatSynSigType ps = mkEmptyImplicitBndrs (synifyPatSynType ps)
 
 synifyType :: SynifyTypeState -> Type -> LHsType GhcRn
-synifyType _ (TyVarTy tv) = noLoc $ HsTyVar NotPromoted $ noLoc (getName tv)
+synifyType _ (TyVarTy tv) = noLoc $ HsTyVar PlaceHolder NotPromoted $ noLoc (getName tv)
 synifyType _ (TyConApp tc tys)
   -- Use */# instead of TYPE 'Lifted/TYPE 'Unlifted (#473)
   | tc `hasKey` tYPETyConKey
   , [TyConApp lev []] <- tys
   , lev `hasKey` liftedRepDataConKey
-  = noLoc (HsTyVar NotPromoted (noLoc starKindTyConName))
+  = noLoc (HsTyVar PlaceHolder NotPromoted (noLoc starKindTyConName))
   -- Use non-prefix tuple syntax where possible, because it looks nicer.
   | Just sort <- tyConTuple_maybe tc
   , tyConArity tc == length tys
-  = noLoc $ HsTupleTy (case sort of
+  = noLoc $ HsTupleTy PlaceHolder
+                       (case sort of
                           BoxedTuple      -> HsBoxedTuple
                           ConstraintTuple -> HsConstraintTuple
                           UnboxedTuple    -> HsUnboxedTuple)
                        (map (synifyType WithinType) tys)
   -- ditto for lists
   | getName tc == listTyConName, [ty] <- tys =
-     noLoc $ HsListTy (synifyType WithinType ty)
+     noLoc $ HsListTy PlaceHolder (synifyType WithinType ty)
   -- ditto for implicit parameter tycons
   | tc `hasKey` ipClassKey
   , [name, ty] <- tys
   , Just x <- isStrLitTy name
-  = noLoc $ HsIParamTy (noLoc $ HsIPName x) (synifyType WithinType ty)
+  = noLoc $ HsIParamTy PlaceHolder (noLoc $ HsIPName x) (synifyType WithinType ty)
   -- and equalities
   | tc `hasKey` eqTyConKey
   , [ty1, ty2] <- tys
-  = noLoc $ HsEqTy (synifyType WithinType ty1) (synifyType WithinType ty2)
+  = noLoc $ HsEqTy PlaceHolder (synifyType WithinType ty1) (synifyType WithinType ty2)
   -- Most TyCons:
   | otherwise =
-    foldl (\t1 t2 -> noLoc (HsAppTy t1 t2))
-      (noLoc $ HsTyVar NotPromoted $ noLoc (getName tc))
+    foldl (\t1 t2 -> noLoc (HsAppTy PlaceHolder t1 t2))
+      (noLoc $ HsTyVar PlaceHolder NotPromoted $ noLoc (getName tc))
       (map (synifyType WithinType) $
        filterOut isCoercionTy tys)
 synifyType s (AppTy t1 (CoercionTy {})) = synifyType s t1
 synifyType _ (AppTy t1 t2) = let
   s1 = synifyType WithinType t1
   s2 = synifyType WithinType t2
-  in noLoc $ HsAppTy s1 s2
+  in noLoc $ HsAppTy PlaceHolder s1 s2
 synifyType _ (FunTy t1 t2) = let
   s1 = synifyType WithinType t1
   s2 = synifyType WithinType t2
-  in noLoc $ HsFunTy s1 s2
+  in noLoc $ HsFunTy PlaceHolder s1 s2
 synifyType s forallty@(ForAllTy _tv _ty) =
   let (tvs, ctx, tau) = tcSplitSigmaTy forallty
       sPhi = HsQualTy { hst_ctxt = synifyCtx ctx
+                      , hst_xqual   = PlaceHolder
                       , hst_body = synifyType WithinType tau }
   in case s of
     DeleteTopLevelQuantification -> synifyType ImplicitizeForAll tau
     WithinType        -> noLoc $ HsForAllTy { hst_bndrs = map synifyTyVar tvs
+                                            , hst_xforall = PlaceHolder
                                             , hst_body  = noLoc sPhi }
     ImplicitizeForAll -> noLoc sPhi
 
-synifyType _ (LitTy t) = noLoc $ HsTyLit $ synifyTyLit t
+synifyType _ (LitTy t) = noLoc $ HsTyLit PlaceHolder $ synifyTyLit t
 synifyType s (CastTy t _) = synifyType s t
 synifyType _ (CoercionTy {}) = error "synifyType:Coercion"
 
@@ -440,10 +443,12 @@ synifyPatSynType ps = let
                -- possible by taking theta = [], as that will print no context at all
              | otherwise = req_theta
   sForAll []  s = s
-  sForAll tvs s = HsForAllTy { hst_bndrs = map synifyTyVar tvs
-                             , hst_body  = noLoc s }
-  sQual theta s = HsQualTy   { hst_ctxt  = synifyCtx theta
-                             , hst_body  = noLoc s }
+  sForAll tvs s = HsForAllTy { hst_bndrs   = map synifyTyVar tvs
+                             , hst_xforall = PlaceHolder
+                             , hst_body    = noLoc s }
+  sQual theta s = HsQualTy   { hst_ctxt    = synifyCtx theta
+                             , hst_xqual   = PlaceHolder
+                             , hst_body    = noLoc s }
   sTau = unLoc $ synifyType WithinType $ mkFunTys arg_tys res_ty
   in noLoc $ sForAll univ_tvs $ sQual req_theta' $ sForAll ex_tvs $ sQual prov_theta sTau
 

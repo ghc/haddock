@@ -431,7 +431,7 @@ subordinates instMap decl = case decl of
                   , L _ (ConDeclField ns _ doc) <- (unLoc flds)
                   , L _ n <- ns ]
         derivs  = [ (instName, [unL doc], M.empty)
-                  | HsIB { hsib_body = L l (HsDocTy _ doc) }
+                  | HsIB { hsib_body = L l (HsDocTy _ _ doc) }
                       <- concatMap (unLoc . deriv_clause_tys . unLoc) $
                            unLoc $ dd_derivs dd
                   , Just instName <- [M.lookup l instMap] ]
@@ -450,9 +450,9 @@ typeDocs d =
   where
     go n (HsForAllTy { hst_body = ty }) = go n (unLoc ty)
     go n (HsQualTy   { hst_body = ty }) = go n (unLoc ty)
-    go n (HsFunTy (L _ (HsDocTy _ (L _ x))) (L _ ty)) = M.insert n x $ go (n+1) ty
-    go n (HsFunTy _ ty) = go (n+1) (unLoc ty)
-    go n (HsDocTy _ (L _ doc)) = M.singleton n doc
+    go n (HsFunTy _ (L _ (HsDocTy _ _ (L _ x))) (L _ ty)) = M.insert n x $ go (n+1) ty
+    go n (HsFunTy _ _ ty) = go (n+1) (unLoc ty)
+    go n (HsDocTy _ _ (L _ doc)) = M.singleton n doc
     go _ _ = M.empty
 
 
@@ -1043,17 +1043,18 @@ extractPatternSyn nm t tvs cons =
         typ = longArrow args (data_ty con)
         typ' =
           case con of
-            ConDeclH98 { con_cxt = Just cxt } -> noLoc (HsQualTy cxt typ)
+            ConDeclH98 { con_cxt = Just cxt } -> noLoc (HsQualTy PlaceHolder cxt typ)
             _ -> typ
-        typ'' = noLoc (HsQualTy (noLoc []) typ')
+        typ'' = noLoc (HsQualTy PlaceHolder (noLoc []) typ')
     in PatSynSig [noLoc nm] (mkEmptyImplicitBndrs typ'')
 
-  longArrow :: [LHsType name] -> LHsType name -> LHsType name
-  longArrow inputs output = foldr (\x y -> noLoc (HsFunTy x y)) output inputs
+  longArrow :: [LHsType (GhcPass name)] -> LHsType (GhcPass name) -> LHsType (GhcPass name)
+  longArrow inputs output = foldr (\x y -> noLoc (HsFunTy PlaceHolder x y)) output inputs
 
   data_ty con
     | ConDeclGADT{} <- con = hsib_body $ con_type con
-    | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar NotPromoted (noLoc t))) tvs
+    | otherwise = foldl' (\x y -> noLoc (HsAppTy PlaceHolder x y))
+                         (noLoc (HsTyVar PlaceHolder NotPromoted (noLoc t))) tvs
 
 extractRecSel :: Name -> Name -> [LHsType GhcRn] -> [LConDecl GhcRn]
               -> LSig GhcRn
@@ -1062,7 +1063,7 @@ extractRecSel _ _ _ [] = error "extractRecSel: selector not found"
 extractRecSel nm t tvs (L _ con : rest) =
   case getConDetails con of
     RecCon (L _ fields) | ((l,L _ (ConDeclField _nn ty _)) : _) <- matching_fields fields ->
-      L l (TypeSig [noLoc nm] (mkEmptySigWcType (noLoc (HsFunTy data_ty (getBangType ty)))))
+      L l (TypeSig [noLoc nm] (mkEmptySigWcType (noLoc (HsFunTy PlaceHolder data_ty (getBangType ty)))))
     _ -> extractRecSel nm t tvs rest
  where
   matching_fields :: [LConDeclField GhcRn] -> [(SrcSpan, LConDeclField GhcRn)]
@@ -1071,7 +1072,8 @@ extractRecSel nm t tvs (L _ con : rest) =
   data_ty
     -- ResTyGADT _ ty <- con_res con = ty
     | ConDeclGADT{} <- con = hsib_body $ con_type con
-    | otherwise = foldl' (\x y -> noLoc (HsAppTy x y)) (noLoc (HsTyVar NotPromoted (noLoc t))) tvs
+    | otherwise = foldl' (\x y -> noLoc (HsAppTy PlaceHolder x y))
+                         (noLoc (HsTyVar PlaceHolder NotPromoted (noLoc t))) tvs
 
 -- | Keep export items with docs.
 pruneExportItems :: [ExportItem GhcRn] -> [ExportItem GhcRn]
