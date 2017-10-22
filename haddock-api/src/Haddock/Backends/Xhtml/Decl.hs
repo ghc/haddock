@@ -143,7 +143,7 @@ ppTypeOrFunSig summary links loc docnames typ (doc, argDocs) (pref1, pref2, sep)
 
 ppForAll :: [LHsTyVarBndr DocNameI] -> Unicode -> Qualification -> Html
 ppForAll tvs unicode qual =
-  case [ppKTv n k | L _ (KindedTyVar (L _ n) k) <- tvs] of
+  case [ppKTv n k | L _ (KindedTyVar _ (L _ n) k) <- tvs] of
     [] -> noHtml
     ts -> forallSymbol unicode <+> hsep ts +++ dot
   where ppKTv n k = parens $
@@ -979,11 +979,12 @@ ppParendType unicode qual emptyCtxts ty = ppr_mono_ty pREC_CON ty unicode qual e
 ppFunLhType  unicode qual emptyCtxts ty = ppr_mono_ty pREC_FUN ty unicode qual emptyCtxts
 
 ppHsTyVarBndr :: Unicode -> Qualification -> HsTyVarBndr DocNameI -> Html
-ppHsTyVarBndr _       qual (UserTyVar (L _ name)) =
+ppHsTyVarBndr _       qual (UserTyVar _ (L _ name)) =
     ppDocName qual Raw False name
-ppHsTyVarBndr unicode qual (KindedTyVar name kind) =
+ppHsTyVarBndr unicode qual (KindedTyVar _ name kind) =
     parens (ppDocName qual Raw False (unLoc name) <+> dcolon unicode <+>
             ppLKind unicode qual kind)
+ppHsTyVarBndr _ _ (NewTyVarBndr _) = error "haddock:ppHsTyVarBndr"
 
 ppLKind :: Unicode -> Qualification -> LHsKind DocNameI -> Html
 ppLKind unicode qual y = ppKind unicode qual (unLoc y)

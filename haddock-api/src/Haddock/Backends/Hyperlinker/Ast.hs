@@ -130,9 +130,9 @@ binds = everythingInRenamedSource
             pure (sspan, RtkVar name)
         _ -> empty
     tvar term = case cast term of
-        (Just ((GHC.L sspan (GHC.UserTyVar name)) :: GHC.LHsTyVarBndr GHC.GhcRn)) ->
+        (Just ((GHC.L sspan (GHC.UserTyVar _ name)) :: GHC.LHsTyVarBndr GHC.GhcRn)) ->
             pure (sspan, RtkBind (GHC.unLoc name))
-        (Just (GHC.L _ (GHC.KindedTyVar (GHC.L sspan name) _))) ->
+        (Just (GHC.L _ (GHC.KindedTyVar _ (GHC.L sspan name) _))) ->
             pure (sspan, RtkBind name)
         _ -> empty
 

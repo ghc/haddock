@@ -391,11 +391,12 @@ mkPseudoFamilyDecl (FamilyDecl { .. }) = PseudoFamilyDecl
     , pfdKindSig = fdResultSig
     }
   where
-    mkType (KindedTyVar (L loc name) lkind) =
+    mkType (KindedTyVar _ (L loc name) lkind) =
         HsKindSig PlaceHolder tvar lkind
       where
         tvar = L loc (HsTyVar PlaceHolder NotPromoted (L loc name))
-    mkType (UserTyVar name) = HsTyVar PlaceHolder NotPromoted name
+    mkType (UserTyVar _ name) = HsTyVar PlaceHolder NotPromoted name
+    mkType (NewTyVarBndr _ ) = panic "haddock:mkPseudoFamilyDecl"
 
 
 -- | An instance head that may have documentation and a source location.
@@ -700,3 +701,7 @@ type instance XExplicitTupleTy DocNameI = PlaceHolder
 type instance XTyLit           DocNameI = PlaceHolder
 type instance XWildCardTy      DocNameI = HsWildCardInfo DocNameI
 type instance XNewType         DocNameI = NewHsTypeX
+
+type instance XUserTyVar    DocNameI = PlaceHolder
+type instance XKindedTyVar  DocNameI = PlaceHolder
+type instance XNewTyVarBndr DocNameI = PlaceHolder

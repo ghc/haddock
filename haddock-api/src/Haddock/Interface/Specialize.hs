@@ -54,8 +54,9 @@ specializeTyVarBndrs bndrs typs =
     specialize $ zip bndrs' typs
   where
     bndrs' = map (bname . unLoc) . hsq_explicit $ bndrs
-    bname (UserTyVar (L _ name)) = name
-    bname (KindedTyVar (L _ name) _) = name
+    bname (UserTyVar _ (L _ name)) = name
+    bname (KindedTyVar _ (L _ name) _) = name
+    bname (NewTyVarBndr _) = error "haddock:specializeTyVarBndrs"
 
 
 specializePseudoFamilyDecl :: LHsQTyVars GhcRn -> [HsType GhcRn]
@@ -287,10 +288,10 @@ renameContext :: HsContext GhcRn -> Rename (IdP GhcRn) (HsContext GhcRn)
 renameContext = renameLTypes
 
 renameBinder :: HsTyVarBndr GhcRn -> Rename (IdP GhcRn) (HsTyVarBndr GhcRn)
-renameBinder (UserTyVar lname) = UserTyVar <$> located renameName lname
-renameBinder (KindedTyVar lname lkind) =
-  KindedTyVar <$> located renameName lname <*> located renameType lkind
-
+renameBinder (UserTyVar x lname) = UserTyVar x <$> located renameName lname
+renameBinder (KindedTyVar x lname lkind) =
+  KindedTyVar x <$> located renameName lname <*> located renameType lkind
+renameBinder (NewTyVarBndr _) = error "haddock:renameBinder"
 
 -- | Core renaming logic.
 renameName :: (Eq name, SetName name) => name -> Rename name name
@@ -345,5 +346,6 @@ located f (L loc e) = L loc <$> f e
 
 
 tyVarName :: HsTyVarBndr name -> IdP name
-tyVarName (UserTyVar name) = unLoc name
-tyVarName (KindedTyVar (L _ name) _) = name
+tyVarName (UserTyVar _ name) = unLoc name
+tyVarName (KindedTyVar _ (L _ name) _) = name
+tyVarName (NewTyVarBndr _ ) = error "haddock:tyVarName"

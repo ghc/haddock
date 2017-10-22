@@ -143,7 +143,7 @@ synifyTyCon _coax tc
     DataDecl { tcdLName = synifyName tc
              , tcdTyVars =       -- tyConTyVars doesn't work on fun/prim, but we can make them up:
                          let mk_hs_tv realKind fakeTyVar
-                                = noLoc $ KindedTyVar (noLoc (getName fakeTyVar))
+                                = noLoc $ KindedTyVar PlaceHolder (noLoc (getName fakeTyVar))
                                                       (synifyKindSig realKind)
                          in HsQTvs { hsq_implicit = []   -- No kind polymorphism
                                    , hsq_explicit = zipWith mk_hs_tv (fst (splitFunTys (tyConKind tc)))
@@ -258,7 +258,7 @@ synifyFamilyResultSig :: Maybe Name -> Kind -> LFamilyResultSig GhcRn
 synifyFamilyResultSig  Nothing    kind =
    noLoc $ KindSig  (synifyKindSig kind)
 synifyFamilyResultSig (Just name) kind =
-   noLoc $ TyVarSig (noLoc $ KindedTyVar (noLoc name) (synifyKindSig kind))
+   noLoc $ TyVarSig (noLoc $ KindedTyVar PlaceHolder (noLoc name) (synifyKindSig kind))
 
 -- User beware: it is your responsibility to pass True (use_gadt_syntax)
 -- for any constructor that would be misrepresented by omitting its
@@ -339,8 +339,8 @@ synifyTyVars ktvs = HsQTvs { hsq_implicit = []
 
 synifyTyVar :: TyVar -> LHsTyVarBndr GhcRn
 synifyTyVar tv
-  | isLiftedTypeKind kind = noLoc (UserTyVar (noLoc name))
-  | otherwise             = noLoc (KindedTyVar (noLoc name) (synifyKindSig kind))
+  | isLiftedTypeKind kind = noLoc (UserTyVar PlaceHolder (noLoc name))
+  | otherwise             = noLoc (KindedTyVar PlaceHolder (noLoc name) (synifyKindSig kind))
   where
     kind = tyVarKind tv
     name = getName tv

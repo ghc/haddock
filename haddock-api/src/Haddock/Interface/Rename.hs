@@ -275,13 +275,14 @@ renameLHsQTyVars (HsQTvs { hsq_implicit = _, hsq_explicit = tvs })
                 -- This is rather bogus, but I'm not sure what else to do
 
 renameLTyVarBndr :: LHsTyVarBndr GhcRn -> RnM (LHsTyVarBndr DocNameI)
-renameLTyVarBndr (L loc (UserTyVar (L l n)))
+renameLTyVarBndr (L loc (UserTyVar x (L l n)))
   = do { n' <- rename n
-       ; return (L loc (UserTyVar (L l n'))) }
-renameLTyVarBndr (L loc (KindedTyVar (L lv n) kind))
+       ; return (L loc (UserTyVar x (L l n'))) }
+renameLTyVarBndr (L loc (KindedTyVar x (L lv n) kind))
   = do { n' <- rename n
        ; kind' <- renameLKind kind
-       ; return (L loc (KindedTyVar (L lv n') kind')) }
+       ; return (L loc (KindedTyVar x (L lv n') kind')) }
+renameLTyVarBndr (L _ (NewTyVarBndr _ )) = error "haddock:renameLTyVarBndr"
 
 renameLContext :: Located [LHsType GhcRn] -> RnM (Located [LHsType DocNameI])
 renameLContext (L loc context) = do
