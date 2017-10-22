@@ -892,7 +892,7 @@ ppSideBySideField subdocs unicode qual (ConDeclField names ltype _) =
   where
     -- don't use cd_fld_doc for same reason we don't use con_doc above
     -- Where there is more than one name, they all have the same documentation
-    mbDoc = lookup (selectorFieldOcc $ unLoc $ head names) subdocs >>= combineDocumentation . fst
+    mbDoc = lookup (extFieldOcc $ unLoc $ head names) subdocs >>= combineDocumentation . fst
 
 
 ppShortField :: Bool -> Unicode -> Qualification -> ConDeclField DocNameI -> Html

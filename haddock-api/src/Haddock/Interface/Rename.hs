@@ -469,9 +469,10 @@ renameConDeclFieldField (L l (ConDeclField names t doc)) = do
   return $ L l (ConDeclField names' t' doc')
 
 renameLFieldOcc :: LFieldOcc GhcRn -> RnM (LFieldOcc DocNameI)
-renameLFieldOcc (L l (FieldOcc lbl sel)) = do
+renameLFieldOcc (L l (FieldOcc sel lbl)) = do
   sel' <- rename sel
-  return $ L l (FieldOcc lbl sel')
+  return $ L l (FieldOcc sel' lbl)
+renameLFieldOcc (L _ (NewFieldOcc _)) = error "haddock:renameLFieldOcc"
 
 renameSig :: Sig GhcRn -> RnM (Sig DocNameI)
 renameSig sig = case sig of

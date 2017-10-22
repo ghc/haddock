@@ -167,7 +167,7 @@ decls (group, _, _, _) = concatMap ($ group)
         _ -> empty
     fld term = case cast term of
         Just (field :: GHC.ConDeclField GHC.GhcRn)
-          -> map (decl . fmap GHC.selectorFieldOcc) $ GHC.cd_fld_names field
+          -> map (decl . fmap GHC.extFieldOcc) $ GHC.cd_fld_names field
         Nothing -> empty
     sig (GHC.L _ (GHC.TypeSig names _)) = map decl names
     sig _ = []

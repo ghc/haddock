@@ -705,3 +705,6 @@ type instance XNewType         DocNameI = NewHsTypeX
 type instance XUserTyVar    DocNameI = PlaceHolder
 type instance XKindedTyVar  DocNameI = PlaceHolder
 type instance XNewTyVarBndr DocNameI = PlaceHolder
+
+type instance XFieldOcc    DocNameI = DocName
+type instance XNewFieldOcc DocNameI = PlaceHolder

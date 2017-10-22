@@ -62,7 +62,7 @@ import Haddock.GhcUtils
 import GHC
 import Name
 import NameSet ( emptyNameSet )
-import HsTypes (selectorFieldOcc)
+import HsTypes (extFieldOcc)
 
 import Control.Monad ( liftM )
 import Data.Char ( isAlpha, isAlphaNum, isAscii, ord, chr )
@@ -211,7 +211,7 @@ restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
 
         field_avail :: LConDeclField GhcRn -> Bool
         field_avail (L _ (ConDeclField fs _ _))
-            = all (\f -> selectorFieldOcc (unLoc f) `elem` names) fs
+            = all (\f -> extFieldOcc (unLoc f) `elem` names) fs
         field_types flds = [ t | ConDeclField _ t _ <- flds ]
 
     keep _ = Nothing

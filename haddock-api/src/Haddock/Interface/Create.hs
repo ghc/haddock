@@ -426,7 +426,7 @@ subordinates instMap decl = case decl of
         cons = map unL $ (dd_cons dd)
         constrs = [ (unL cname, maybeToList $ fmap unL $ con_doc c, M.empty)
                   | c <- cons, cname <- getConNames c ]
-        fields  = [ (selectorFieldOcc n, maybeToList $ fmap unL doc, M.empty)
+        fields  = [ (extFieldOcc n, maybeToList $ fmap unL doc, M.empty)
                   | RecCon flds <- map getConDetails cons
                   , L _ (ConDeclField ns _ doc) <- (unLoc flds)
                   , L _ n <- ns ]
@@ -1018,7 +1018,7 @@ extractDecl name decl
                            , RecCon rec <- map (getConDetails . unLoc) (dd_cons (feqn_rhs d))
                            , ConDeclField { cd_fld_names = ns } <- map unLoc (unLoc rec)
                            , L _ n <- ns
-                           , selectorFieldOcc n == name
+                           , extFieldOcc n == name
                       ]
         in case matches of
           [d0] -> extractDecl name (noLoc . InstD $ DataFamInstD d0)
@@ -1068,7 +1068,7 @@ extractRecSel nm t tvs (L _ con : rest) =
  where
   matching_fields :: [LConDeclField GhcRn] -> [(SrcSpan, LConDeclField GhcRn)]
   matching_fields flds = [ (l,f) | f@(L _ (ConDeclField ns _ _)) <- flds
-                                 , L l n <- ns, selectorFieldOcc n == nm ]
+                                 , L l n <- ns, extFieldOcc n == nm ]
   data_ty
     -- ResTyGADT _ ty <- con_res con = ty
     | ConDeclGADT{} <- con = hsib_body $ con_type con
