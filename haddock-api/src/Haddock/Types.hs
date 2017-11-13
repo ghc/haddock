@@ -349,7 +349,7 @@ data InstType name
   | TypeInst  (Maybe (HsType name)) -- ^ Body (right-hand side)
   | DataInst (TyClDecl name)        -- ^ Data constructors
 
-instance (SourceTextX (GhcPass a), OutputableBndrId (GhcPass a))
+instance (OutputableBndrId (GhcPass a))
          => Outputable (InstType (GhcPass a)) where
   ppr (ClassInst { .. }) = text "ClassInst"
       <+> ppr clsiCtx
