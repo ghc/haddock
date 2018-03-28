@@ -87,8 +87,8 @@ dropHsDocTy = f
         f (HsDocTy a _) = f $ unL a
         f x = x
 
-outHsType :: (SourceTextX a, OutputableBndrId a)
-          => DynFlags -> HsType a -> String
+outHsType :: (OutputableBndrId (GhcPass a))
+          => DynFlags -> HsType (GhcPass a) -> String
 outHsType dflags = out dflags . dropHsDocTy
 
 
