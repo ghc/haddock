@@ -169,7 +169,7 @@ decls (group, _, _, _) = concatMap ($ group)
         Just (field :: GHC.ConDeclField GHC.GhcRn)
           -> map (decl . fmap GHC.extFieldOcc) $ GHC.cd_fld_names field
         Nothing -> empty
-    sig (GHC.L _ (GHC.TypeSig names _)) = map decl names
+    sig (GHC.L _ (GHC.TypeSig _ names _)) = map decl names
     sig _ = []
     decl (GHC.L sspan name) = (sspan, RtkDecl name)
     tyref (GHC.L sspan name) = (sspan, RtkType name)
