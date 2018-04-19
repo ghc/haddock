@@ -350,19 +350,19 @@ renameTyClD d = case d of
     decl' <- renameFamilyDecl decl
     return (FamDecl { tcdFExt = noExt, tcdFam = decl' })
 
-  SynDecl { tcdLName = lname, tcdTyVars = tyvars, tcdFixity = fixity, tcdRhs = rhs, tcdFVs = _fvs } -> do
+  SynDecl { tcdLName = lname, tcdTyVars = tyvars, tcdFixity = fixity, tcdRhs = rhs } -> do
     lname'    <- renameL lname
     tyvars'   <- renameLHsQTyVars tyvars
     rhs'     <- renameLType rhs
     return (SynDecl { tcdSExt = noExt, tcdLName = lname', tcdTyVars = tyvars'
-                    , tcdFixity = fixity, tcdRhs = rhs', tcdFVs = placeHolderNames })
+                    , tcdFixity = fixity, tcdRhs = rhs' })
 
-  DataDecl { tcdLName = lname, tcdTyVars = tyvars, tcdFixity = fixity, tcdDataDefn = defn, tcdFVs = _fvs } -> do
+  DataDecl { tcdLName = lname, tcdTyVars = tyvars, tcdFixity = fixity, tcdDataDefn = defn } -> do
     lname'    <- renameL lname
     tyvars'   <- renameLHsQTyVars tyvars
     defn'     <- renameDataDefn defn
     return (DataDecl { tcdDExt = noExt, tcdLName = lname', tcdTyVars = tyvars'
-                     , tcdFixity = fixity, tcdDataDefn = defn', tcdDataCusk = PlaceHolder, tcdFVs = placeHolderNames })
+                     , tcdFixity = fixity, tcdDataDefn = defn' })
 
   ClassDecl { tcdCtxt = lcontext, tcdLName = lname, tcdTyVars = ltyvars, tcdFixity = fixity
             , tcdFDs = lfundeps, tcdSigs = lsigs, tcdATs = ats, tcdATDefs = at_defs } -> do
@@ -374,11 +374,10 @@ renameTyClD d = case d of
     ats'      <- mapM (renameLThing renameFamilyDecl) ats
     at_defs'  <- mapM renameLTyFamDefltEqn at_defs
     -- we don't need the default methods or the already collected doc entities
-    return (ClassDecl { tcdCExt = noExt
-                      , tcdCtxt = lcontext', tcdLName = lname', tcdTyVars = ltyvars'
+    return (ClassDecl { tcdCtxt = lcontext', tcdLName = lname', tcdTyVars = ltyvars'
                       , tcdFixity = fixity
                       , tcdFDs = lfundeps', tcdSigs = lsigs', tcdMeths= emptyBag
-                      , tcdATs = ats', tcdATDefs = at_defs', tcdDocs = [], tcdFVs = placeHolderNames })
+                      , tcdATs = ats', tcdATDefs = at_defs', tcdDocs = [], tcdCExt = placeHolderNames })
   XTyClDecl _ -> panic "haddock:renameTyClD"
 
   where
@@ -513,14 +512,14 @@ renameSig sig = case sig of
 
 
 renameForD :: ForeignDecl GhcRn -> RnM (ForeignDecl DocNameI)
-renameForD (ForeignImport _ lname ltype co x) = do
+renameForD (ForeignImport _ lname ltype x) = do
   lname' <- renameL lname
   ltype' <- renameLSigType ltype
-  return (ForeignImport noExt lname' ltype' co x)
-renameForD (ForeignExport _ lname ltype co x) = do
+  return (ForeignImport noExt lname' ltype' x)
+renameForD (ForeignExport _ lname ltype x) = do
   lname' <- renameL lname
   ltype' <- renameLSigType ltype
-  return (ForeignExport noExt lname' ltype' co x)
+  return (ForeignExport noExt lname' ltype' x)
 renameForD (XForeignDecl _) = panic "haddock:renameForD"
 
 

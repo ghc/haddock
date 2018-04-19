@@ -53,8 +53,8 @@ getMainDeclBinder (ValD _ d) =
     []       -> []
     (name:_) -> [name]
 getMainDeclBinder (SigD _ d) = sigNameNoLoc d
-getMainDeclBinder (ForD _ (ForeignImport _ name _ _ _)) = [unLoc name]
-getMainDeclBinder (ForD _ (ForeignExport _ _ _ _ _)) = []
+getMainDeclBinder (ForD _ (ForeignImport _ name _ _)) = [unLoc name]
+getMainDeclBinder (ForD _ (ForeignExport _ _ _ _)) = []
 getMainDeclBinder _ = []
 
 -- Extract the source location where an instance is defined. This is used

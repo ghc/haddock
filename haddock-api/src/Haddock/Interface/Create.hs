@@ -481,11 +481,11 @@ conArgDocs con = case getConArgs con of
 
 -- | Extract function argument docs from inside top-level decls.
 declTypeDocs :: HsDecl GhcRn -> Map Int HsDocString
-declTypeDocs (SigD  _ (TypeSig _ _ ty))           = typeDocs (unLoc (hsSigWcType ty))
-declTypeDocs (SigD  _ (ClassOpSig _ _ _ ty))      = typeDocs (unLoc (hsSigType ty))
-declTypeDocs (SigD  _ (PatSynSig _ _ ty))         = typeDocs (unLoc (hsSigType ty))
-declTypeDocs (ForD  _ (ForeignImport _ _ ty _ _)) = typeDocs (unLoc (hsSigType ty))
-declTypeDocs (TyClD _ (SynDecl { tcdRhs = ty }))  = typeDocs (unLoc ty)
+declTypeDocs (SigD  _ (TypeSig _ _ ty))          = typeDocs (unLoc (hsSigWcType ty))
+declTypeDocs (SigD  _ (ClassOpSig _ _ _ ty))     = typeDocs (unLoc (hsSigType ty))
+declTypeDocs (SigD  _ (PatSynSig _ _ ty))        = typeDocs (unLoc (hsSigType ty))
+declTypeDocs (ForD  _ (ForeignImport _ _ ty _))  = typeDocs (unLoc (hsSigType ty))
+declTypeDocs (TyClD _ (SynDecl { tcdRhs = ty })) = typeDocs (unLoc ty)
 declTypeDocs _ = M.empty
 
 -- | Extract function argument docs from inside types.

@@ -78,8 +78,7 @@ tyThingToLHsDecl t = case t of
            tyClErrors = lefts atTyClDecls
            famDeclErrors = lefts atFamDecls
        in withErrs (tyClErrors ++ famDeclErrors) . TyClD noExt $ ClassDecl
-         { tcdCExt = noExt
-         , tcdCtxt = synifyCtx (classSCTheta cl)
+         { tcdCtxt = synifyCtx (classSCTheta cl)
          , tcdLName = synifyName cl
          , tcdTyVars = synifyTyVars (tyConVisibleTyVars (classTyCon cl))
          , tcdFixity = Prefix
@@ -94,7 +93,7 @@ tyThingToLHsDecl t = case t of
          , tcdATs = rights atFamDecls
          , tcdATDefs = [] --ignore associated type defaults
          , tcdDocs = [] --we don't have any docs at this point
-         , tcdFVs = placeHolderNamesTc }
+         , tcdCExt = placeHolderNamesTc }
     | otherwise
     -> synifyTyCon Nothing tc >>= allOK . TyClD noExt
 
@@ -150,8 +149,7 @@ synifyTyCon :: Maybe (CoAxiom br) -> TyCon -> Either ErrMsg (TyClDecl GhcRn)
 synifyTyCon _coax tc
   | isFunTyCon tc || isPrimTyCon tc
   = return $
-    DataDecl { tcdDExt = noExt
-             , tcdLName = synifyName tc
+    DataDecl { tcdLName = synifyName tc
              , tcdTyVars =       -- tyConTyVars doesn't work on fun/prim, but we can make them up:
                          let mk_hs_tv realKind fakeTyVar
                                 = noLoc $ KindedTyVar noExt (noLoc (getName fakeTyVar))
@@ -172,8 +170,7 @@ synifyTyCon _coax tc
                                                -- we have their kind accurately:
                                       , dd_cons = []  -- No constructors
                                       , dd_derivs = noLoc [] }
-           , tcdDataCusk = False
-           , tcdFVs = placeHolderNamesTc }
+           , tcdDExt = DataDeclRn False placeHolderNamesTc }
 
 synifyTyCon _coax tc
   | Just flav <- famTyConFlav_maybe tc
@@ -209,12 +206,11 @@ synifyTyCon _coax tc
 
 synifyTyCon coax tc
   | Just ty <- synTyConRhs_maybe tc
-  = return $ SynDecl { tcdSExt   = noExt
+  = return $ SynDecl { tcdSExt   = emptyNameSet
                      , tcdLName  = synifyName tc
                      , tcdTyVars = synifyTyVars (tyConVisibleTyVars tc)
                      , tcdFixity = Prefix
-                     , tcdRhs = synifyType WithinType ty
-                     , tcdFVs = placeHolderNamesTc }
+                     , tcdRhs = synifyType WithinType ty }
   | otherwise =
   -- (closed) newtype and data
   let
@@ -256,10 +252,9 @@ synifyTyCon coax tc
                     , dd_derivs  = alg_deriv }
  in case lefts consRaw of
   [] -> return $
-        DataDecl { tcdDExt = noExt
-                 , tcdLName = name, tcdTyVars = tyvars, tcdFixity = Prefix
+        DataDecl { tcdLName = name, tcdTyVars = tyvars, tcdFixity = Prefix
                  , tcdDataDefn = defn
-                 , tcdDataCusk = False, tcdFVs = placeHolderNamesTc }
+                 , tcdDExt = DataDeclRn False placeHolderNamesTc }
   dataConErrs -> Left $ unlines dataConErrs
 
 synifyInjectivityAnn :: Maybe Name -> [TyVar] -> Injectivity

@@ -129,8 +129,8 @@ ppExport dflags ExportDecl { expItemDecl    = L _ decl
         f (TyClD _ d@DataDecl{})  = ppData dflags d subdocs
         f (TyClD _ d@SynDecl{})   = ppSynonym dflags d
         f (TyClD _ d@ClassDecl{}) = ppClass dflags d subdocs
-        f (ForD _ (ForeignImport _ name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
-        f (ForD _ (ForeignExport _ name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
+        f (ForD _ (ForeignImport _ name typ _)) = [pp_sig dflags [name] (hsSigType typ)]
+        f (ForD _ (ForeignExport _ name typ _)) = [pp_sig dflags [name] (hsSigType typ)]
         f (SigD _ sig) = ppSig dflags sig ++ ppFixities
         f _ = []
 
@@ -185,12 +185,11 @@ ppClass dflags decl subdocs =
 
         tyFamEqnToSyn :: TyFamDefltEqn GhcRn -> TyClDecl GhcRn
         tyFamEqnToSyn tfe = SynDecl
-            { tcdSExt   = noExt
-            , tcdLName  = feqn_tycon tfe
+            { tcdLName  = feqn_tycon tfe
             , tcdTyVars = feqn_pats tfe
             , tcdFixity = feqn_fixity tfe
             , tcdRhs    = feqn_rhs tfe
-            , tcdFVs    = emptyNameSet
+            , tcdSExt   = emptyNameSet
             }
 
 

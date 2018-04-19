@@ -226,7 +226,7 @@ tyvarNames = map (getName . hsLTyVarName) . hsQTvExplicit
 ppFor :: Bool -> LinksInfo -> SrcSpan -> DocForDecl DocName
       -> ForeignDecl DocNameI -> [(DocName, Fixity)]
       -> Splice -> Unicode -> Qualification -> Html
-ppFor summary links loc doc (ForeignImport _ (L _ name) typ _ _) fixities
+ppFor summary links loc doc (ForeignImport _ (L _ name) typ _) fixities
       splice unicode qual
   = ppFunSig summary links loc doc [name] (hsSigType typ) fixities splice unicode qual
 ppFor _ _ _ _ _ _ _ _ _ = error "ppFor"
