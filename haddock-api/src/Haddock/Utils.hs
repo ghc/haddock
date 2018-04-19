@@ -162,10 +162,10 @@ lHsQTyVarsToTypes tvs
 
 restrictTo :: [Name] -> LHsDecl GhcRn -> LHsDecl GhcRn
 restrictTo names (L loc decl) = L loc $ case decl of
-  TyClD d | isDataDecl d  ->
-    TyClD (d { tcdDataDefn = restrictDataDefn names (tcdDataDefn d) })
-  TyClD d | isClassDecl d ->
-    TyClD (d { tcdSigs = restrictDecls names (tcdSigs d),
+  TyClD x d | isDataDecl d  ->
+    TyClD x (d { tcdDataDefn = restrictDataDefn names (tcdDataDefn d) })
+  TyClD x d | isClassDecl d ->
+    TyClD x (d { tcdSigs = restrictDecls names (tcdSigs d),
                tcdATs = restrictATs names (tcdATs d) })
   _ -> decl
 
@@ -178,6 +178,7 @@ restrictDataDefn names defn@(HsDataDefn { dd_ND = new_or_data, dd_cons = cons })
       []    -> defn { dd_ND = DataType, dd_cons = [] }
       [con] -> defn { dd_cons = [con] }
       _ -> error "Should not happen"
+restrictDataDefn _ (XHsDataDefn _) = error "restrictDataDefn"
 
 restrictCons :: [Name] -> [LConDecl GhcRn] -> [LConDecl GhcRn]
 restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]

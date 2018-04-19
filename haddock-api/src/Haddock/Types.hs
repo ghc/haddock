@@ -386,6 +386,7 @@ mkPseudoFamilyDecl (FamilyDecl { .. }) = PseudoFamilyDecl
         tvar = L loc (HsTyVar PlaceHolder NotPromoted (L loc name))
     mkType (UserTyVar _ name) = HsTyVar PlaceHolder NotPromoted name
     mkType (XTyVarBndr _ ) = panic "haddock:mkPseudoFamilyDecl"
+mkPseudoFamilyDecl (XFamilyDecl {}) = panic "haddock:mkPseudoFamilyDecl"
 
 
 -- | An instance head that may have documentation and a source location.
@@ -703,3 +704,33 @@ type instance XPatSynSig   DocNameI = PlaceHolder
 type instance XClassOpSig  DocNameI = PlaceHolder
 type instance XTypeSig     DocNameI = PlaceHolder
 type instance XMinimalSig  DocNameI = PlaceHolder
+
+type instance XForeignExport  DocNameI = PlaceHolder
+type instance XForeignImport  DocNameI = PlaceHolder
+type instance XConDeclGADT    DocNameI = PlaceHolder
+type instance XConDeclH98     DocNameI = PlaceHolder
+
+type instance XDerivD     DocNameI = PlaceHolder
+type instance XInstD      DocNameI = PlaceHolder
+type instance XForD       DocNameI = PlaceHolder
+type instance XSigD       DocNameI = PlaceHolder
+type instance XTyClD      DocNameI = PlaceHolder
+
+type instance XNoSig      DocNameI = PlaceHolder
+type instance XCKindSig   DocNameI = PlaceHolder
+type instance XTyVarSig   DocNameI = PlaceHolder
+
+type instance XCFamEqn       DocNameI _ _ = PlaceHolder
+
+type instance XCClsInstDecl DocNameI = PlaceHolder
+type instance XCDerivDecl   DocNameI = PlaceHolder
+type instance XDataFamInstD DocNameI = PlaceHolder
+type instance XTyFamInstD   DocNameI = PlaceHolder
+type instance XClsInstD     DocNameI = PlaceHolder
+type instance XCHsDataDefn  DocNameI = PlaceHolder
+type instance XCFamilyDecl  DocNameI = PlaceHolder
+type instance XClassDecl    DocNameI = PlaceHolder
+type instance XDataDecl     DocNameI = PlaceHolder
+type instance XSynDecl      DocNameI = PlaceHolder
+type instance XFamDecl      DocNameI = PlaceHolder
+

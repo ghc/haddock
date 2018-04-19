@@ -126,12 +126,12 @@ ppExport dflags ExportDecl { expItemDecl    = L _ decl
                            , expItemFixities = fixities
                            } = ppDocumentation dflags dc ++ f decl
     where
-        f (TyClD d@DataDecl{})  = ppData dflags d subdocs
-        f (TyClD d@SynDecl{})   = ppSynonym dflags d
-        f (TyClD d@ClassDecl{}) = ppClass dflags d subdocs
-        f (ForD (ForeignImport name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
-        f (ForD (ForeignExport name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
-        f (SigD sig) = ppSig dflags sig ++ ppFixities
+        f (TyClD _ d@DataDecl{})  = ppData dflags d subdocs
+        f (TyClD _ d@SynDecl{})   = ppSynonym dflags d
+        f (TyClD _ d@ClassDecl{}) = ppClass dflags d subdocs
+        f (ForD _ (ForeignImport _ name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
+        f (ForD _ (ForeignExport _ name typ _ _)) = [pp_sig dflags [name] (hsSigType typ)]
+        f (SigD _ sig) = ppSig dflags sig ++ ppFixities
         f _ = []
 
         ppFixities = concatMap (ppFixity dflags) fixities
@@ -185,7 +185,8 @@ ppClass dflags decl subdocs =
 
         tyFamEqnToSyn :: TyFamDefltEqn GhcRn -> TyClDecl GhcRn
         tyFamEqnToSyn tfe = SynDecl
-            { tcdLName  = feqn_tycon tfe
+            { tcdSExt   = noExt
+            , tcdLName  = feqn_tycon tfe
             , tcdTyVars = feqn_pats tfe
             , tcdFixity = feqn_fixity tfe
             , tcdRhs    = feqn_rhs tfe
@@ -260,6 +261,7 @@ ppCtor dflags _dat subdocs con@(ConDeclGADT { })
 
         typeSig nm ty = operator nm ++ " :: " ++ outHsType dflags (unL ty)
         name = out dflags $ map unL $ getConNames con
+ppCtor _ _ _ XConDecl {} = panic "haddock:ppCtor"
 
 ppFixity :: DynFlags -> (Name, Fixity) -> [String]
 ppFixity dflags (name, fixity) = [out dflags ((FixitySig noExt [noLoc name] fixity) :: FixitySig GhcRn)]
