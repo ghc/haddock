@@ -173,13 +173,13 @@ getGADTConType (ConDeclGADT { con_forall = has_forall
                             , con_qvars = qtvs
                             , con_mb_cxt = mcxt, con_args = args
                             , con_res_ty = res_ty })
- | has_forall = noLoc (HsForAllTy { hst_xforall = PlaceHolder
+ | has_forall = noLoc (HsForAllTy { hst_xforall = NoExt
                                   , hst_bndrs = hsQTvExplicit qtvs
                                   , hst_body  = theta_ty })
  | otherwise  = theta_ty
  where
    theta_ty | Just theta <- mcxt
-            = noLoc (HsQualTy { hst_xqual = PlaceHolder, hst_ctxt = theta, hst_body = tau_ty })
+            = noLoc (HsQualTy { hst_xqual = NoExt, hst_ctxt = theta, hst_body = tau_ty })
             | otherwise
             = tau_ty
 
@@ -205,13 +205,13 @@ getGADTConTypeG (ConDeclGADT { con_forall = has_forall
                             , con_qvars = qtvs
                             , con_mb_cxt = mcxt, con_args = args
                             , con_res_ty = res_ty })
- | has_forall = noLoc (HsForAllTy { hst_xforall = PlaceHolder
+ | has_forall = noLoc (HsForAllTy { hst_xforall = NoExt
                                   , hst_bndrs = hsQTvExplicit qtvs
                                   , hst_body  = theta_ty })
  | otherwise  = theta_ty
  where
    theta_ty | Just theta <- mcxt
-            = noLoc (HsQualTy { hst_xqual = PlaceHolder, hst_ctxt = theta, hst_body = tau_ty })
+            = noLoc (HsQualTy { hst_xqual = NoExt, hst_ctxt = theta, hst_body = tau_ty })
             | otherwise
             = tau_ty
 
