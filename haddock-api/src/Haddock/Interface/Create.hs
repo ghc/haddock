@@ -644,22 +644,22 @@ mkExportItems
         decls maps fixMap splices instIfaceMap dflags allExports
     Just exports -> liftM concat $ mapM lookupExport exports
   where
-    lookupExport (IEGroup lev docStr, _)  = liftErrMsg $ do
+    lookupExport (IEGroup _ lev docStr, _)  = liftErrMsg $ do
       doc <- processDocString dflags gre docStr
       return [ExportGroup lev "" doc]
 
-    lookupExport (IEDoc docStr, _)        = liftErrMsg $ do
+    lookupExport (IEDoc _ docStr, _)        = liftErrMsg $ do
       doc <- processDocStringParas dflags gre docStr
       return [ExportDoc doc]
 
-    lookupExport (IEDocNamed str, _)      = liftErrMsg $
+    lookupExport (IEDocNamed _ str, _)      = liftErrMsg $
       findNamedDoc str [ unL d | d <- decls ] >>= \case
         Nothing -> return  []
         Just docStr -> do
           doc <- processDocStringParas dflags gre docStr
           return [ExportDoc doc]
 
-    lookupExport (IEModuleContents (L _ mod_name), _)
+    lookupExport (IEModuleContents _ (L _ mod_name), _)
       -- only consider exporting a module if we are sure we
       -- are really exporting the whole module and not some
       -- subset. We also look through module aliases here.
