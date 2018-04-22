@@ -653,19 +653,6 @@ instance Monad ErrMsgGhc where
 -- * Pass sensitive types
 -----------------------------------------------------------------------------
 
-type instance PostRn DocNameI NameSet        = PlaceHolder
-type instance PostRn DocNameI Fixity         = PlaceHolder
-type instance PostRn DocNameI Bool           = PlaceHolder
-type instance PostRn DocNameI Name           = DocName
-type instance PostRn DocNameI (Located Name) = Located DocName
-type instance PostRn DocNameI [Name]         = PlaceHolder
-type instance PostRn DocNameI DocName        = DocName
-
-type instance PostTc DocNameI Kind     = PlaceHolder
-type instance PostTc DocNameI Type     = PlaceHolder
-type instance PostTc DocNameI Coercion = PlaceHolder
-
-
 type instance XForAllTy        DocNameI = PlaceHolder
 type instance XQualTy          DocNameI = PlaceHolder
 type instance XTyVar           DocNameI = PlaceHolder
@@ -688,7 +675,7 @@ type instance XRecTy           DocNameI = PlaceHolder
 type instance XExplicitListTy  DocNameI = PlaceHolder
 type instance XExplicitTupleTy DocNameI = PlaceHolder
 type instance XTyLit           DocNameI = PlaceHolder
-type instance XWildCardTy      DocNameI = HsWildCardInfo DocNameI
+type instance XWildCardTy      DocNameI = HsWildCardInfo
 type instance XXType           DocNameI = NewHsTypeX
 
 type instance XUserTyVar    DocNameI = PlaceHolder
@@ -733,4 +720,10 @@ type instance XClassDecl    DocNameI = PlaceHolder
 type instance XDataDecl     DocNameI = PlaceHolder
 type instance XSynDecl      DocNameI = PlaceHolder
 type instance XFamDecl      DocNameI = PlaceHolder
+
+type instance XHsIB      DocNameI _ = PlaceHolder
+type instance XHsWC      DocNameI _ = PlaceHolder
+
+type instance XHsQTvs        DocNameI = PlaceHolder
+type instance XConDeclField  DocNameI = PlaceHolder
 

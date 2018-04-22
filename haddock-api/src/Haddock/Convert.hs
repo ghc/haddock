@@ -1,5 +1,5 @@
 
-{-# LANGUAGE CPP, PatternGuards #-}
+{-# LANGUAGE CPP, PatternGuards, TypeFamilies #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Haddock.Convert
@@ -119,8 +119,8 @@ synifyAxBranch tc (CoAxBranch { cab_tvs = tkvs, cab_lhs = args, cab_rhs = rhs })
         annot_typats    = zipWith3 annotHsType (mkIsPolyTvs fam_tvs)
                                    args_types_only typats
         hs_rhs          = synifyType WithinType rhs
-    in HsIB { hsib_vars   = map tyVarName tkvs
-            , hsib_closed = True
+    in HsIB { hsib_ext = HsIBRn { hsib_vars   = map tyVarName tkvs
+                                , hsib_closed = True }
             , hsib_body   = FamEqn { feqn_ext    = noExt
                                    , feqn_tycon  = name
                                    , feqn_pats   = annot_typats
@@ -154,10 +154,12 @@ synifyTyCon _coax tc
                          let mk_hs_tv realKind fakeTyVar
                                 = noLoc $ KindedTyVar noExt (noLoc (getName fakeTyVar))
                                                       (synifyKindSig realKind)
-                         in HsQTvs { hsq_implicit = []   -- No kind polymorphism
+                         in HsQTvs { hsq_ext =
+                                       HsQTvsRn { hsq_implicit = []   -- No kind polymorphism
+                                                , hsq_dependent = emptyNameSet }
                                    , hsq_explicit = zipWith mk_hs_tv (fst (splitFunTys (tyConKind tc)))
                                                                 alphaTyVars --a, b, c... which are unfortunately all kind *
-                                   , hsq_dependent = emptyNameSet }
+                                   }
 
            , tcdFixity = Prefix
 
@@ -300,7 +302,7 @@ synifyDataCon use_gadt_syntax dc =
 
   field_tys = zipWith con_decl_field (dataConFieldLabels dc) linear_tys
   con_decl_field fl synTy = noLoc $
-    ConDeclField [noLoc $ FieldOcc (flSelector fl) (noLoc $ mkVarUnqual $ flLabel fl)] synTy
+    ConDeclField noExt [noLoc $ FieldOcc (flSelector fl) (noLoc $ mkVarUnqual $ flLabel fl)] synTy
                  Nothing
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> Left "synifyDataCon: contradiction!"
@@ -346,9 +348,9 @@ synifyCtx = noLoc . map (synifyType WithinType)
 
 
 synifyTyVars :: [TyVar] -> LHsQTyVars GhcRn
-synifyTyVars ktvs = HsQTvs { hsq_implicit = []
-                           , hsq_explicit = map synifyTyVar ktvs
-                           , hsq_dependent = emptyNameSet }
+synifyTyVars ktvs = HsQTvs { hsq_ext = HsQTvsRn { hsq_implicit = []
+                                                , hsq_dependent = emptyNameSet }
+                           , hsq_explicit = map synifyTyVar ktvs }
 
 synifyTyVar :: TyVar -> LHsTyVarBndr GhcRn
 synifyTyVar tv

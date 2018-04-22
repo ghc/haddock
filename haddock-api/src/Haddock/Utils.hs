@@ -64,6 +64,7 @@ import GHC
 import Name
 import NameSet ( emptyNameSet )
 import HsTypes (extFieldOcc)
+import Outputable ( panic )
 
 import Control.Monad ( liftM )
 import Data.Char ( isAlpha, isAlphaNum, isAscii, ord, chr )
@@ -196,9 +197,10 @@ restrictCons names decls = [ L p d | L p (Just d) <- map (fmap keep) decls ]
         InfixCon _ _ -> Just d
       where
         field_avail :: LConDeclField GhcRn -> Bool
-        field_avail (L _ (ConDeclField fs _ _))
+        field_avail (L _ (ConDeclField _ fs _ _))
             = all (\f -> extFieldOcc (unLoc f) `elem` names) fs
-        field_types flds = [ t | ConDeclField _ t _ <- flds ]
+        field_avail (L _ (XConDeclField _)) = panic "haddock:field_avail"
+        field_types flds = [ t | ConDeclField _ _ t _ <- flds ]
 
     keep _ = Nothing
 
@@ -209,13 +211,14 @@ restrictDecls names = mapMaybe (filterLSigNames (`elem` names))
 restrictATs :: [Name] -> [LFamilyDecl GhcRn] -> [LFamilyDecl GhcRn]
 restrictATs names ats = [ at | at <- ats , unL (fdLName (unL at)) `elem` names ]
 
-emptyHsQTvs :: LHsQTyVars Name
+emptyHsQTvs :: LHsQTyVars GhcRn
 -- This function is here, rather than in HsTypes, because it *renamed*, but
 -- does not necessarily have all the rigt kind variables.  It is used
 -- in Haddock just for printing, so it doesn't matter
-emptyHsQTvs = HsQTvs { hsq_implicit = error "haddock:emptyHsQTvs"
-                     , hsq_explicit = []
-                     , hsq_dependent = error "haddock:emptyHsQTvs" }
+emptyHsQTvs = HsQTvs { hsq_ext = HsQTvsRn
+                       { hsq_implicit = error "haddock:emptyHsQTvs"
+                       , hsq_dependent = error "haddock:emptyHsQTvs" }
+                     , hsq_explicit = [] }
 
 
 --------------------------------------------------------------------------------

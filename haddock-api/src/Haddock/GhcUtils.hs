@@ -70,9 +70,11 @@ getInstLoc (TyFamInstD _ (TyFamInstDecl
   -- equation. This does not happen for data family instances, for some reason.
   { tfid_eqn = HsIB { hsib_body = FamEqn { feqn_rhs = L l _ }}})) = l
 getInstLoc (ClsInstD _ (XClsInstDecl _)) = panic "getInstLoc"
-getInstLoc (DataFamInstD _ (DataFamInstDecl (HsIB _ (XFamEqn _) _))) = panic "getInstLoc"
-getInstLoc (TyFamInstD _ (TyFamInstDecl (HsIB _ (XFamEqn _) _))) = panic "getInstLoc"
+getInstLoc (DataFamInstD _ (DataFamInstDecl (HsIB _ (XFamEqn _)))) = panic "getInstLoc"
+getInstLoc (TyFamInstD _ (TyFamInstDecl (HsIB _ (XFamEqn _)))) = panic "getInstLoc"
 getInstLoc (XInstDecl _) = panic "getInstLoc"
+getInstLoc (DataFamInstD _ (DataFamInstDecl (XHsImplicitBndrs _))) = panic "getInstLoc"
+getInstLoc (TyFamInstD _ (TyFamInstDecl (XHsImplicitBndrs _))) = panic "getInstLoc"
 
 
 

@@ -271,10 +271,11 @@ renameType t = case t of
   HsAppsTy _ _              -> error "renameType: HsAppsTy"
 
 renameLHsQTyVars :: LHsQTyVars GhcRn -> RnM (LHsQTyVars DocNameI)
-renameLHsQTyVars (HsQTvs { hsq_implicit = _, hsq_explicit = tvs })
+renameLHsQTyVars (HsQTvs { hsq_explicit = tvs })
   = do { tvs' <- mapM renameLTyVarBndr tvs
-       ; return (HsQTvs { hsq_implicit = error "haddock:renameLHsQTyVars", hsq_explicit = tvs', hsq_dependent = error "haddock:renameLHsQTyVars" }) }
-                -- This is rather bogus, but I'm not sure what else to do
+       ; return (HsQTvs { hsq_ext = noExt
+                        , hsq_explicit = tvs' }) }
+renameLHsQTyVars (XLHsQTyVars _) = panic "haddock:renameLHsQTyVars"
 
 renameLTyVarBndr :: LHsTyVarBndr GhcRn -> RnM (LHsTyVarBndr DocNameI)
 renameLTyVarBndr (L loc (UserTyVar x (L l n)))
@@ -291,8 +292,8 @@ renameLContext (L loc context) = do
   context' <- mapM renameLType context
   return (L loc context')
 
-renameWildCardInfo :: HsWildCardInfo GhcRn -> RnM (HsWildCardInfo DocNameI)
-renameWildCardInfo (AnonWildCard  (L l name)) = AnonWildCard . L l <$> rename name
+renameWildCardInfo :: HsWildCardInfo -> RnM HsWildCardInfo
+renameWildCardInfo (AnonWildCard  (L l name)) = return (AnonWildCard (L l name))
 
 renameInstHead :: InstHead GhcRn -> RnM (InstHead DocNameI)
 renameInstHead InstHead {..} = do
@@ -475,11 +476,12 @@ renameDetails (InfixCon a b) = do
   return (InfixCon a' b')
 
 renameConDeclFieldField :: LConDeclField GhcRn -> RnM (LConDeclField DocNameI)
-renameConDeclFieldField (L l (ConDeclField names t doc)) = do
+renameConDeclFieldField (L l (ConDeclField _ names t doc)) = do
   names' <- mapM renameLFieldOcc names
   t'   <- renameLType t
   doc' <- mapM renameLDocHsSyn doc
-  return $ L l (ConDeclField names' t' doc')
+  return $ L l (ConDeclField noExt names' t' doc')
+renameConDeclFieldField (L _ (XConDeclField _)) = panic "haddock:renameConDeclFieldField"
 
 renameLFieldOcc :: LFieldOcc GhcRn -> RnM (LFieldOcc DocNameI)
 renameLFieldOcc (L l (FieldOcc sel lbl)) = do
@@ -623,8 +625,8 @@ renameImplicit :: (in_thing -> RnM out_thing)
 renameImplicit rn_thing (HsIB { hsib_body = thing })
   = do { thing' <- rn_thing thing
        ; return (HsIB { hsib_body = thing'
-                      , hsib_vars = PlaceHolder
-                      , hsib_closed = PlaceHolder }) }
+                      , hsib_ext = noExt }) }
+renameImplicit _ (XHsImplicitBndrs _) = panic "haddock:renameImplicit"
 
 renameWc :: (in_thing -> RnM out_thing)
          -> HsWildCardBndrs GhcRn in_thing
@@ -632,7 +634,8 @@ renameWc :: (in_thing -> RnM out_thing)
 renameWc rn_thing (HsWC { hswc_body = thing })
   = do { thing' <- rn_thing thing
        ; return (HsWC { hswc_body = thing'
-                      , hswc_wcs = PlaceHolder }) }
+                      , hswc_ext = noExt }) }
+renameWc _ (XHsWildCardBndrs _) = panic "haddock:renameWc"
 
 renameDocInstance :: DocInstance GhcRn -> RnM (DocInstance DocNameI)
 renameDocInstance (inst, idoc, L l n) = do

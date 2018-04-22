@@ -370,6 +370,7 @@ ppTyFam summary associated links instances fixities loc doc decl splice unicode 
       = ( ppAppNameTypes (unLoc n) (map unLoc ts) unicode qual
           <+> equals <+> ppType unicode qual HideEmptyContexts (unLoc rhs)
         , Nothing, [] )
+    ppTyFamEqn (XHsImplicitBndrs _) = panic "haddock:ppTyFam"
     ppTyFamEqn (HsIB { hsib_body = XFamEqn _}) = panic "haddock:ppTyFam"
 
 
@@ -990,7 +991,7 @@ ppConstrHdr forall_ tvs ctxt unicode qual = ppForall +++ ppCtxt
 -- | Pretty-print a record field
 ppSideBySideField :: [(DocName, DocForDecl DocName)] -> Unicode -> Qualification
                   -> ConDeclField DocNameI -> SubDecl
-ppSideBySideField subdocs unicode qual (ConDeclField names ltype _) =
+ppSideBySideField subdocs unicode qual (ConDeclField _ names ltype _) =
   ( hsep (punctuate comma [ ppBinder False (rdrNameOcc field)
                           | L _ name <- names
                           , let field = (unLoc . rdrNameFieldOcc) name
@@ -1004,12 +1005,14 @@ ppSideBySideField subdocs unicode qual (ConDeclField names ltype _) =
     -- don't use cd_fld_doc for same reason we don't use con_doc above
     -- Where there is more than one name, they all have the same documentation
     mbDoc = lookup (extFieldOcc $ unLoc $ head names) subdocs >>= combineDocumentation . fst
+ppSideBySideField _ _ _ (XConDeclField _) = panic "haddock:ppSideBySideField"
 
 
 ppShortField :: Bool -> Unicode -> Qualification -> ConDeclField DocNameI -> Html
-ppShortField summary unicode qual (ConDeclField names ltype _)
+ppShortField summary unicode qual (ConDeclField _ names ltype _)
   = hsep (punctuate comma (map ((ppBinder summary) . rdrNameOcc . unLoc . rdrNameFieldOcc . unLoc) names))
     <+> dcolon unicode <+> ppLType unicode qual HideEmptyContexts ltype
+ppShortField _ _ _ (XConDeclField _) = panic "haddock:ppShortField"
 
 
 -- | Pretty print an expanded pattern (for bundled patterns)

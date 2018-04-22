@@ -456,7 +456,7 @@ subordinates instMap decl = case decl of
                   | c <- cons, cname <- getConNames c ]
         fields  = [ (extFieldOcc n, maybeToList $ fmap unL doc, M.empty)
                   | RecCon flds <- map getConArgs cons
-                  , L _ (ConDeclField ns _ doc) <- (unLoc flds)
+                  , L _ (ConDeclField _ ns _ doc) <- (unLoc flds)
                   , L _ n <- ns ]
         derivs  = [ (instName, [unL doc], M.empty)
                   | HsIB { hsib_body = L l (HsDocTy _ _ doc) }
@@ -1112,12 +1112,12 @@ extractRecSel _ _ _ [] = error "extractRecSel: selector not found"
 
 extractRecSel nm t tvs (L _ con : rest) =
   case getConArgs con of
-    RecCon (L _ fields) | ((l,L _ (ConDeclField _nn ty _)) : _) <- matching_fields fields ->
+    RecCon (L _ fields) | ((l,L _ (ConDeclField _ _nn ty _)) : _) <- matching_fields fields ->
       L l (TypeSig noExt [noLoc nm] (mkEmptySigWcType (noLoc (HsFunTy noExt data_ty (getBangType ty)))))
     _ -> extractRecSel nm t tvs rest
  where
   matching_fields :: [LConDeclField GhcRn] -> [(SrcSpan, LConDeclField GhcRn)]
-  matching_fields flds = [ (l,f) | f@(L _ (ConDeclField ns _ _)) <- flds
+  matching_fields flds = [ (l,f) | f@(L _ (ConDeclField _ ns _ _)) <- flds
                                  , L l n <- ns, extFieldOcc n == nm ]
   data_ty
     -- ResTyGADT _ ty <- con_res con = ty
