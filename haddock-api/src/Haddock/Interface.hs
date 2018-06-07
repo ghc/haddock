@@ -64,6 +64,10 @@ import Name (nameIsFromExternalPackage, nameOccName)
 import OccName (isTcOcc)
 import RdrName (unQualOK, gre_name, globalRdrEnvElts)
 import ErrUtils (withTiming)
+import ExtractDocs
+import Outputable
+import LoadIface
+import MkIface
 
 #if defined(mingw32_HOST_OS)
 import System.IO
@@ -178,7 +182,7 @@ processModule :: Verbosity -> ModSummary -> [Flag] -> IfaceMap -> InstIfaceMap -
 processModule verbosity modsum flags modMap instIfaceMap = do
   out verbosity verbose $ "Checking module " ++ moduleString (ms_mod modsum) ++ "..."
   tm <- {-# SCC "parse/typecheck/load" #-} loadModule =<< typecheckModule =<< parseModule modsum
-
+ 
   if not $ isBootSummary modsum then do
     out verbosity verbose "Creating interface..."
     (interface, msgs) <- {-# SCC createIterface #-}
@@ -200,7 +204,6 @@ processModule verbosity modsum flags modMap instIfaceMap = do
                             , unQualOK gre ]               -- In scope unqualified
 
     liftIO $ mapM_ putStrLn (nub msgs)
-    dflags <- getDynFlags
     let (haddockable, haddocked) = ifaceHaddockCoverage interface
         percentage = round (fromIntegral haddocked * 100 / fromIntegral haddockable :: Double) :: Int
         modString = moduleString (ifaceMod interface)
