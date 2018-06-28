@@ -187,22 +187,8 @@ processModule verbosity modsum flags modMap instIfaceMap = do
     out verbosity verbose "Creating interface..."
     (interface, msgs) <- {-# SCC createIterface #-}
                         withTiming getDynFlags "createInterface" (const ()) $ do
-                          runWriterGhc $ createInterface tm flags modMap instIfaceMap
-
-    -- We need to keep track of which modules were somehow in scope so that when
-    -- Haddock later looks for instances, it also looks in these modules too.
-    --
-    -- See https://github.com/haskell/haddock/issues/469.
-    hsc_env <- getSession
-    let new_rdr_env = tcg_rdr_env . fst . GHC.tm_internals_ $ tm
-        this_pkg = thisPackage (hsc_dflags hsc_env)
-        !mods = mkModuleSet [ nameModule name
-                            | gre <- globalRdrEnvElts new_rdr_env
-                            , let name = gre_name gre
-                            , nameIsFromExternalPackage this_pkg name
-                            , isTcOcc (nameOccName name)   -- Types and classes only
-                            , unQualOK gre ]               -- In scope unqualified
-
+                          --runWriterGhc $ createInterface tm flags modMap instIfaceMap
+                          runWriterGhc $ createInterface' iface flags modMap instIfaceMap
     liftIO $ mapM_ putStrLn (nub msgs)
     let (haddockable, haddocked) = ifaceHaddockCoverage interface
         percentage = round (fromIntegral haddocked * 100 / fromIntegral haddockable :: Double) :: Int
