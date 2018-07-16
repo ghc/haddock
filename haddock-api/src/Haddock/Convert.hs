@@ -31,7 +31,7 @@ import NameSet ( emptyNameSet )
 import RdrName ( mkVarUnqual )
 import PatSyn
 import SrcLoc ( Located, noLoc, unLoc, GenLocated(..), srcLocSpan )
-import TcType ( tcSplitSigmaTy, tcSplitSigmaTyPreserveSynonyms )
+import TcType ( tcSplitSigmaTyPreserveSynonyms )
 import TyCon
 import Type
 import TyCoRep
