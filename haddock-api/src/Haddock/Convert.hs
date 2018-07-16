@@ -31,7 +31,7 @@ import NameSet ( emptyNameSet )
 import RdrName ( mkVarUnqual )
 import PatSyn
 import SrcLoc ( Located, noLoc, unLoc, GenLocated(..), srcLocSpan )
-import TcType ( tcSplitSigmaTy )
+import TcType ( tcSplitSigmaTy, tcSplitSigmaTyPreserveSynonyms )
 import TyCon
 import Type
 import TyCoRep
@@ -527,7 +527,7 @@ synifyType _ (FunTy t1 t2) = let
   s2 = synifyType WithinType t2
   in noLoc $ HsFunTy noExt s1 s2
 synifyType s forallty@(ForAllTy _tv _ty) =
-  let (tvs, ctx, tau) = tcSplitSigmaTy forallty
+  let (tvs, ctx, tau) = tcSplitSigmaTyPreserveSynonyms forallty
       sPhi = HsQualTy { hst_ctxt = synifyCtx ctx
                       , hst_xqual   = noExt
                       , hst_body = synifyType WithinType tau }
