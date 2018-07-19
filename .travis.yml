@@ -68,7 +68,10 @@ script:
  # - rm -rf ./dist-newstyle
 
  # build & run tests
- - cabal new-build -w ${HC} ${TEST} ${BENCH} --allow-newer --constraint 'setup.Cabal installed'   all
- - if [ "x$TEST" = "x--enable-tests" ]; then cabal new-test -w ${HC} ${TEST} --allow-newer --constraint 'setup.Cabal installed'  all; fi 
+ #
+ # We don't use "new-build/new-test all", as some tests have dependencies that
+ # won't build with ghc-head
+ - cabal new-build -w ${HC} ${TEST} ${BENCH} --allow-newer --constraint 'setup.Cabal installed'
+ - if [ "x$TEST" = "x--enable-tests" ]; then cabal new-test -w ${HC} ${TEST} --allow-newer --constraint 'setup.Cabal installed'; fi
 
 # EOF
