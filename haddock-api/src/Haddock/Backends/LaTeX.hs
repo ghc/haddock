@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TypeFamilies #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Haddock.Backends.LaTeX

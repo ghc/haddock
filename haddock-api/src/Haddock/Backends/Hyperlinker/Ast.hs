@@ -4,6 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Haddock.Backends.Hyperlinker.Ast (enrich) where
 
@@ -122,11 +123,11 @@ binds = everythingInRenamedSource
         (Just (GHC.L sspan (name :: GHC.Name))) -> pure (sspan, RtkVar name)
         _ -> empty
     pat term = case cast term of
-        (Just ((GHC.L sspan (GHC.VarPat _ name)) :: GHC.LPat GHC.GhcRn)) ->
+        (Just ((GHC.dL->(sspan , GHC.VarPat _ name)) :: GHC.LPat GHC.GhcRn)) ->
             pure (sspan, RtkBind (GHC.unLoc name))
-        (Just (GHC.L _ (GHC.ConPatIn (GHC.L sspan name) recs))) ->
+        (Just (GHC.dL->(_ , GHC.ConPatIn (GHC.L sspan name) recs))) ->
             [(sspan, RtkVar name)] ++ everythingInRenamedSource rec recs
-        (Just (GHC.L _ (GHC.AsPat _ (GHC.L sspan name) _))) ->
+        (Just (GHC.dL->(_ , GHC.AsPat _ (GHC.L sspan name) _))) ->
             pure (sspan, RtkBind name)
         _ -> empty
     rec term = case cast term of

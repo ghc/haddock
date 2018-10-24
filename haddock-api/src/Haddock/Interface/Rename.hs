@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TypeFamilies #-}
 ----------------------------------------------------------------------------
 -- |
 -- Module      :  Haddock.Interface.Rename

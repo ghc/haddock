@@ -742,3 +742,4 @@ type instance XHsWC      DocNameI _ = NoExt
 type instance XHsQTvs        DocNameI = NoExt
 type instance XConDeclField  DocNameI = NoExt
 
+type instance XNewPat DocNameI = (SrcSpan , Pat DocNameI)

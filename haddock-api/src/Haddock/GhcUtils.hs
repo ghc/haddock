@@ -2,6 +2,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK hide #-}
+{-# LANGUAGE FlexibleContexts #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Haddock.GhcUtils
@@ -48,7 +50,8 @@ isConSym :: OccName -> Bool
 isConSym = isLexConSym . occNameFS
 
 
-getMainDeclBinder :: HsDecl name -> [IdP name]
+getMainDeclBinder :: (XNewPat p ~ (sp , Pat p) ) =>
+                     HsDecl p -> [IdP p]
 getMainDeclBinder (TyClD _ d) = [tcdName d]
 getMainDeclBinder (ValD _ d) =
   case collectHsBindBinders d of
@@ -62,7 +65,7 @@ getMainDeclBinder _ = []
 -- Extract the source location where an instance is defined. This is used
 -- to correlate InstDecls with their Instance/CoAxiom Names, via the
 -- instanceMap.
-getInstLoc :: InstDecl name -> SrcSpan
+getInstLoc :: InstDecl (GhcPass p) -> SrcSpan
 getInstLoc (ClsInstD _ (ClsInstDecl { cid_poly_ty = ty })) = getLoc (hsSigType ty)
 getInstLoc (DataFamInstD _ (DataFamInstDecl
   { dfid_eqn = HsIB { hsib_body = FamEqn { feqn_tycon = L l _ }}})) = l
@@ -434,5 +437,3 @@ setStubDir    f d = d{ stubDir    = Just f
   -- -stubdir D adds an implicit -I D, so that gcc can find the _stub.h file
   -- \#included from the .hc file when compiling with -fvia-C.
 setOutputDir  f = setObjectDir f . setHiDir f . setStubDir f
-
-

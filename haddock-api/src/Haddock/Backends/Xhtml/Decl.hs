@@ -1,6 +1,6 @@
 {-# LANGUAGE TransformListComp #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types, TypeFamilies #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Haddock.Backends.Html.Decl
