@@ -611,11 +611,12 @@ synifyType _ vs (AppTy t1 t2) = let
   s2 = synifyType WithinType vs t2
   in noLoc $ HsAppTy noExt s1 s2
 synifyType s vs funty@(FunTy t1 t2)
-  | isPredTy t1 = synifyForAllType s vs funty
+  | isPredTy t1 = synifyForAllType s ForallInvis vs funty
   | otherwise = let s1 = synifyType WithinType vs t1
                     s2 = synifyType WithinType vs t2
                 in noLoc $ HsFunTy noExt s1 s2
-synifyType s vs forallty@(ForAllTy _tv _ty) = synifyForAllType s vs forallty
+synifyType s vs forallty@(ForAllTy (Bndr _ argf) _ty) =
+  synifyForAllType s (argToForallVisFlag argf) vs forallty
 
 synifyType _ _ (LitTy t) = noLoc $ HsTyLit noExt $ synifyTyLit t
 synifyType s vs (CastTy t _) = synifyType s vs t
@@ -625,16 +626,18 @@ synifyType _ _ (CoercionTy {}) = error "synifyType:Coercion"
 -- an 'HsType'
 synifyForAllType
   :: SynifyTypeState  -- ^ what to do with the 'forall'
+  -> ForallVisFlag    -- ^ Whether or not the @forall@ is visible
   -> [TyVar]          -- ^ free variables in the type to convert
   -> Type             -- ^ the forall type to convert
   -> LHsType GhcRn
-synifyForAllType s vs ty =
-  let (tvs, ctx, tau) = tcSplitSigmaTyPreserveSynonyms ty
+synifyForAllType s fvf vs ty =
+  let (tvs, ctx, tau) = tcSplitSigmaTySameVisPreserveSynonyms fvf ty
       sPhi = HsQualTy { hst_ctxt = synifyCtx ctx
                       , hst_xqual = noExt
                       , hst_body = synifyType WithinType (tvs' ++ vs) tau }
 
-      sTy = HsForAllTy { hst_bndrs = sTvs
+      sTy = HsForAllTy { hst_fvf = fvf
+                       , hst_bndrs = sTvs
                        , hst_xforall = noExt
                        , hst_body  = noLoc sPhi }
 
@@ -677,7 +680,8 @@ implicitForAll tycons vs tvs ctx synInner tau
        = HsQualTy { hst_ctxt = synifyCtx ctx
                   , hst_xqual = noExt
                   , hst_body = synInner (tvs' ++ vs) tau }
-  sTy = HsForAllTy { hst_bndrs = sTvs
+  sTy = HsForAllTy { hst_fvf = ForallInvis
+                   , hst_bndrs = sTvs
                    , hst_xforall = noExt
                    , hst_body = noLoc sPhi }
 
@@ -825,21 +829,22 @@ See https://github.com/haskell/haddock/issues/879 for a bug where this
 invariant didn't hold.
 -}
 
--- | A version of 'TcType.tcSplitSigmaTy' that preserves type synonyms.
+-- | A version of 'TcType.tcSplitSigmaTySameVis' that preserves type synonyms.
 --
 -- See Note [Invariant: Never expand type synonyms]
-tcSplitSigmaTyPreserveSynonyms :: Type -> ([TyVar], ThetaType, Type)
-tcSplitSigmaTyPreserveSynonyms ty =
-    case tcSplitForAllTysPreserveSynonyms ty of
+tcSplitSigmaTySameVisPreserveSynonyms :: ForallVisFlag -> Type -> ([TyVar], ThetaType, Type)
+tcSplitSigmaTySameVisPreserveSynonyms fvf ty =
+    case tcSplitForAllTysSameVisPreserveSynonyms fvf ty of
       (tvs, rho) -> case tcSplitPhiTyPreserveSynonyms rho of
         (theta, tau) -> (tvs, theta, tau)
 
 -- | See Note [Invariant: Never expand type synonyms]
-tcSplitForAllTysPreserveSynonyms :: Type -> ([TyVar], Type)
-tcSplitForAllTysPreserveSynonyms ty = split ty ty []
+tcSplitForAllTysSameVisPreserveSynonyms :: ForallVisFlag -> Type -> ([TyVar], Type)
+tcSplitForAllTysSameVisPreserveSynonyms fvf ty = split ty ty []
   where
-    split _       (ForAllTy (Bndr tv _) ty') tvs = split ty' ty' (tv:tvs)
-    split orig_ty _                          tvs = (reverse tvs, orig_ty)
+    split _       (ForAllTy (Bndr tv argf) ty') tvs
+      | fvf == argToForallVisFlag argf              = split ty' ty' (tv:tvs)
+    split orig_ty _                             tvs = (reverse tvs, orig_ty)
 
 -- | See Note [Invariant: Never expand type synonyms]
 tcSplitPhiTyPreserveSynonyms :: Type -> (ThetaType, Type)
