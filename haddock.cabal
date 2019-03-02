@@ -80,7 +80,7 @@ executable haddock
       Cabal >= 1.10,
       ghc-boot,
       ghc-boot-th,
-      ghc == 8.7.*,
+      ghc == 8.8.*,
       bytestring,
       parsec,
       text,
@@ -89,9 +89,9 @@ executable haddock
     other-modules:
       Documentation.Haddock.Parser
       Documentation.Haddock.Parser.Monad
-      Documentation.Haddock.Parser.Identifier
       Documentation.Haddock.Types
       Documentation.Haddock.Doc
+      Documentation.Haddock.Utf8
       Documentation.Haddock.Parser.Util
       Documentation.Haddock.Markup
 
@@ -121,6 +121,7 @@ executable haddock
       Haddock.Backends.HaddockDB
       Haddock.Backends.Hoogle
       Haddock.Backends.Hyperlinker
+      Haddock.Backends.Hyperlinker.Ast
       Haddock.Backends.Hyperlinker.Parser
       Haddock.Backends.Hyperlinker.Renderer
       Haddock.Backends.Hyperlinker.Types
