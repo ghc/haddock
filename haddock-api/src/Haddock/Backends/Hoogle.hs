@@ -196,7 +196,7 @@ ppFam dflags decl@(FamilyDecl { fdInfo = info })
               -- for Hoogle, so pretend it doesn't have any.
               ClosedTypeFamily{} -> decl { fdInfo = OpenTypeFamily }
               _                  -> decl
-ppFam _ XFamilyDecl {} = panic "ppFam"
+ppFam _ (XFamilyDecl nec) = noExtCon nec
 
 ppInstance :: DynFlags -> ClsInst -> [String]
 ppInstance dflags x =
@@ -269,7 +269,7 @@ ppCtor dflags _dat subdocs con@(ConDeclGADT { })
 
         typeSig nm ty = operator nm ++ " :: " ++ outHsType dflags (unL ty)
         name = out dflags $ map unL $ getConNames con
-ppCtor _ _ _ XConDecl {} = panic "haddock:ppCtor"
+ppCtor _ _ _ (XConDecl nec) = noExtCon nec
 
 ppFixity :: DynFlags -> (Name, Fixity) -> [String]
 ppFixity dflags (name, fixity) = [out dflags ((FixitySig noExt [noLoc name] fixity) :: FixitySig GhcRn)]

@@ -21,7 +21,7 @@ module Haddock.GhcUtils where
 import Control.Arrow
 import Data.Char ( isSpace )
 
-import Haddock.Types( DocNameI )
+import Haddock.Types( DocName, DocNameI )
 
 import Exception
 import FV
@@ -69,7 +69,7 @@ getMainDeclBinder _ = []
 -- Extract the source location where an instance is defined. This is used
 -- to correlate InstDecls with their Instance/CoAxiom Names, via the
 -- instanceMap.
-getInstLoc :: InstDecl name -> SrcSpan
+getInstLoc :: InstDecl (GhcPass p) -> SrcSpan
 getInstLoc (ClsInstD _ (ClsInstDecl { cid_poly_ty = ty })) = getLoc (hsSigType ty)
 getInstLoc (DataFamInstD _ (DataFamInstDecl
   { dfid_eqn = HsIB { hsib_body = FamEqn { feqn_tycon = L l _ }}})) = l
@@ -78,12 +78,12 @@ getInstLoc (TyFamInstD _ (TyFamInstDecl
   -- in particular, we need to dig a bit deeper to pull out the entire
   -- equation. This does not happen for data family instances, for some reason.
   { tfid_eqn = HsIB { hsib_body = FamEqn { feqn_rhs = L l _ }}})) = l
-getInstLoc (ClsInstD _ (XClsInstDecl _)) = panic "getInstLoc"
-getInstLoc (DataFamInstD _ (DataFamInstDecl (HsIB _ (XFamEqn _)))) = panic "getInstLoc"
-getInstLoc (TyFamInstD _ (TyFamInstDecl (HsIB _ (XFamEqn _)))) = panic "getInstLoc"
-getInstLoc (XInstDecl _) = panic "getInstLoc"
-getInstLoc (DataFamInstD _ (DataFamInstDecl (XHsImplicitBndrs _))) = panic "getInstLoc"
-getInstLoc (TyFamInstD _ (TyFamInstDecl (XHsImplicitBndrs _))) = panic "getInstLoc"
+getInstLoc (ClsInstD _ (XClsInstDecl nec)) = noExtCon nec
+getInstLoc (DataFamInstD _ (DataFamInstDecl (HsIB _ (XFamEqn nec)))) = noExtCon nec
+getInstLoc (TyFamInstD _ (TyFamInstDecl (HsIB _ (XFamEqn nec)))) = noExtCon nec
+getInstLoc (XInstDecl nec) = noExtCon nec
+getInstLoc (DataFamInstD _ (DataFamInstDecl (XHsImplicitBndrs nec))) = noExtCon nec
+getInstLoc (TyFamInstD _ (TyFamInstDecl (XHsImplicitBndrs nec))) = noExtCon nec
 
 
 
@@ -164,8 +164,28 @@ nubByName f ns = go emptyNameSet ns
 
 -- ---------------------------------------------------------------------
 
--- This function is duplicated as getGADTConType and getGADTConTypeG,
--- as I can't get the types to line up otherwise. AZ.
+-- These functions are duplicated from the GHC API, as they must be
+-- instantiated at DocNameI instead of (GhcPass _).
+
+hsTyVarNameI :: HsTyVarBndr DocNameI -> DocName
+hsTyVarNameI (UserTyVar _ (L _ n))     = n
+hsTyVarNameI (KindedTyVar _ (L _ n) _) = n
+hsTyVarNameI (XTyVarBndr nec) = noExtCon nec
+
+hsLTyVarNameI :: LHsTyVarBndr DocNameI -> DocName
+hsLTyVarNameI = hsTyVarNameI . unLoc
+
+getConNamesI :: ConDecl DocNameI -> [Located DocName]
+getConNamesI ConDeclH98  {con_name  = name}  = [name]
+getConNamesI ConDeclGADT {con_names = names} = names
+getConNamesI (XConDecl nec) = noExtCon nec
+
+hsImplicitBodyI :: HsImplicitBndrs DocNameI thing -> thing
+hsImplicitBodyI (HsIB { hsib_body = body }) = body
+hsImplicitBodyI (XHsImplicitBndrs nec) = noExtCon nec
+
+hsSigTypeI :: LHsSigType DocNameI -> LHsType DocNameI
+hsSigTypeI = hsImplicitBodyI
 
 getGADTConType :: ConDecl DocNameI -> LHsType DocNameI
 -- The full type of a GADT data constructor We really only get this in
@@ -196,7 +216,7 @@ getGADTConType (ConDeclGADT { con_forall = L _ has_forall
 
 getGADTConType (ConDeclH98 {}) = panic "getGADTConType"
   -- Should only be called on ConDeclGADT
-getGADTConType (XConDecl {}) = panic "getGADTConType"
+getGADTConType (XConDecl nec) = noExtCon nec
 
 -- -------------------------------------
 
@@ -229,7 +249,7 @@ getGADTConTypeG (ConDeclGADT { con_forall = L _ has_forall
 
 getGADTConTypeG (ConDeclH98 {}) = panic "getGADTConTypeG"
   -- Should only be called on ConDeclGADT
-getGADTConTypeG (XConDecl {}) = panic "getGADTConTypeG"
+getGADTConTypeG (XConDecl nec) = noExtCon nec
 
 
 -------------------------------------------------------------------------------
@@ -564,7 +584,7 @@ tryCppLine !loc !buf = spanSpace (S.prevChar buf '\n' == '\n') loc buf
 -- | Get free type variables in a 'Type' in their order of appearance.
 -- See [Ordering of implicit variables].
 orderedFVs
-  :: VarSet  -- ^ free variables to ignore 
+  :: VarSet  -- ^ free variables to ignore
   -> [Type]  -- ^ types to traverse (in order) looking for free variables
   -> [TyVar] -- ^ free type variables, in the order they appear in
 orderedFVs vs tys =
@@ -578,7 +598,7 @@ orderedFVs vs tys =
 -- For example, 'tyCoVarsOfTypeList' reports an incorrect order for the type
 -- of 'const :: a -> b -> a':
 --
--- >>> import Name 
+-- >>> import Name
 -- >>> import TyCoRep
 -- >>> import TysPrim
 -- >>> import Var

@@ -383,8 +383,8 @@ mkPseudoFamilyDecl (FamilyDecl { .. }) = PseudoFamilyDecl
       where
         tvar = L loc (HsTyVar NoExt NotPromoted (L loc name))
     mkType (UserTyVar _ name) = HsTyVar NoExt NotPromoted name
-    mkType (XTyVarBndr _ ) = panic "haddock:mkPseudoFamilyDecl"
-mkPseudoFamilyDecl (XFamilyDecl {}) = panic "haddock:mkPseudoFamilyDecl"
+    mkType (XTyVarBndr nec) = noExtCon nec
+mkPseudoFamilyDecl (XFamilyDecl nec) = noExtCon nec
 
 
 -- | An instance head that may have documentation and a source location.
@@ -694,7 +694,7 @@ type instance XXType           DocNameI = NewHsTypeX
 
 type instance XUserTyVar    DocNameI = NoExt
 type instance XKindedTyVar  DocNameI = NoExt
-type instance XXTyVarBndr   DocNameI = NoExt
+type instance XXTyVarBndr   DocNameI = NoExtCon
 
 type instance XCFieldOcc   DocNameI = DocName
 type instance XXFieldOcc   DocNameI = NoExt
@@ -710,6 +710,7 @@ type instance XForeignExport  DocNameI = NoExt
 type instance XForeignImport  DocNameI = NoExt
 type instance XConDeclGADT    DocNameI = NoExt
 type instance XConDeclH98     DocNameI = NoExt
+type instance XXConDecl       DocNameI = NoExtCon
 
 type instance XDerivD     DocNameI = NoExt
 type instance XInstD      DocNameI = NoExt
@@ -717,11 +718,13 @@ type instance XForD       DocNameI = NoExt
 type instance XSigD       DocNameI = NoExt
 type instance XTyClD      DocNameI = NoExt
 
-type instance XNoSig      DocNameI = NoExt
-type instance XCKindSig   DocNameI = NoExt
-type instance XTyVarSig   DocNameI = NoExt
+type instance XNoSig            DocNameI = NoExt
+type instance XCKindSig         DocNameI = NoExt
+type instance XTyVarSig         DocNameI = NoExt
+type instance XXFamilyResultSig DocNameI = NoExtCon
 
 type instance XCFamEqn       DocNameI _ = NoExt
+type instance XXFamEqn       DocNameI _ = NoExtCon
 
 type instance XCClsInstDecl DocNameI = NoExt
 type instance XCDerivDecl   DocNameI = NoExt
@@ -735,12 +738,15 @@ type instance XClassDecl    DocNameI = NoExt
 type instance XDataDecl     DocNameI = NoExt
 type instance XSynDecl      DocNameI = NoExt
 type instance XFamDecl      DocNameI = NoExt
+type instance XXFamilyDecl  DocNameI = NoExtCon
 
-type instance XHsIB      DocNameI _ = NoExt
-type instance XHsWC      DocNameI _ = NoExt
+type instance XHsIB             DocNameI _ = NoExt
+type instance XHsWC             DocNameI _ = NoExt
+type instance XXHsImplicitBndrs DocNameI _ = NoExtCon
 
 type instance XHsQTvs        DocNameI = NoExt
 type instance XConDeclField  DocNameI = NoExt
+type instance XXConDeclField DocNameI = NoExtCon
 
 type instance XXPat DocNameI = Located (Pat DocNameI)
 
