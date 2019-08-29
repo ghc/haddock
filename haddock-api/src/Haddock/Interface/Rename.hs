@@ -311,10 +311,10 @@ renameLTyVarBndr :: LHsTyVarBndr GhcRn -> RnM (LHsTyVarBndr DocNameI)
 renameLTyVarBndr (L loc (UserTyVar x (L l n)))
   = do { n' <- rename n
        ; return (L loc (UserTyVar x (L l n'))) }
-renameLTyVarBndr (L loc (KindedTyVar x (L lv n) kind))
+renameLTyVarBndr (L loc (KindedTyVar _ (L lv n) kind))
   = do { n' <- rename n
        ; kind' <- renameLKind kind
-       ; return (L loc (KindedTyVar x (L lv n') kind')) }
+       ; return (L loc (KindedTyVar noExtField (L lv n') kind')) }
 renameLTyVarBndr (L _ (XTyVarBndr _ )) = error "haddock:renameLTyVarBndr"
 
 renameLContext :: Located [LHsType GhcRn] -> RnM (Located [LHsType DocNameI])

@@ -197,7 +197,7 @@ synifyTyCon prr _coax tc
 
            , tcdFixity = synifyFixity tc
 
-           , tcdDataDefn = HsDataDefn { dd_ext = noExtField
+           , tcdDataDefn = HsDataDefn { dd_ext = emptyNameSet -- doesn't matter here
                                       , dd_ND = DataType  -- arbitrary lie, they are neither
                                                     -- algebraic data nor newtype:
                                       , dd_ctxt = noLoc []
@@ -211,7 +211,7 @@ synifyTyCon prr _coax tc
     -- tyConTyVars doesn't work on fun/prim, but we can make them up:
     mk_hs_tv realKind fakeTyVar
       | isLiftedTypeKind realKind = noLoc $ UserTyVar noExtField (noLoc (getName fakeTyVar))
-      | otherwise = noLoc $ KindedTyVar noExtField (noLoc (getName fakeTyVar)) (synifyKindSig realKind)
+      | otherwise = noLoc $ KindedTyVar emptyNameSet (noLoc (getName fakeTyVar)) (synifyKindSig realKind)
 
     conKind = defaultType prr (tyConKind tc)
     tyVarKinds = fst . splitFunTys . snd . splitPiTysInvisible $ conKind
@@ -287,7 +287,7 @@ synifyTyCon _prr coax tc
   cons = rights consRaw
   -- "deriving" doesn't affect the signature, no need to specify any.
   alg_deriv = noLoc []
-  defn = HsDataDefn { dd_ext     = noExtField
+  defn = HsDataDefn { dd_ext     = emptyNameSet
                     , dd_ND      = alg_nd
                     , dd_ctxt    = alg_ctx
                     , dd_cType   = Nothing
@@ -333,9 +333,9 @@ synifyInjectivityAnn (Just lhs) tvs (Injective inj) =
 synifyFamilyResultSig :: Maybe Name -> Kind -> LFamilyResultSig GhcRn
 synifyFamilyResultSig  Nothing    kind
    | isLiftedTypeKind kind = noLoc $ NoSig noExtField
-   | otherwise = noLoc $ KindSig  noExtField (synifyKindSig kind)
+   | otherwise = noLoc $ KindSig emptyNameSet (synifyKindSig kind)
 synifyFamilyResultSig (Just name) kind =
-   noLoc $ TyVarSig noExtField (noLoc $ KindedTyVar noExtField (noLoc name) (synifyKindSig kind))
+   noLoc $ TyVarSig noExtField (noLoc $ KindedTyVar emptyNameSet (noLoc name) (synifyKindSig kind))
 
 -- User beware: it is your responsibility to pass True (use_gadt_syntax)
 -- for any constructor that would be misrepresented by omitting its
@@ -448,7 +448,7 @@ synifyTyVar' :: VarSet -> TyVar -> LHsTyVarBndr GhcRn
 synifyTyVar' no_kinds tv
   | isLiftedTypeKind kind || tv `elemVarSet` no_kinds
   = noLoc (UserTyVar noExtField (noLoc name))
-  | otherwise = noLoc (KindedTyVar noExtField (noLoc name) (synifyKindSig kind))
+  | otherwise = noLoc (KindedTyVar emptyNameSet (noLoc name) (synifyKindSig kind))
   where
     kind = tyVarKind tv
     name = getName tv
@@ -466,7 +466,7 @@ annotHsType True ty hs_ty
   | not $ isEmptyVarSet $ filterVarSet isTyVar $ tyCoVarsOfType ty
   = let ki    = typeKind ty
         hs_ki = synifyType WithinType [] ki
-    in noLoc (HsKindSig noExtField hs_ty hs_ki)
+    in noLoc (HsKindSig emptyNameSet hs_ty hs_ki)
 annotHsType _    _ hs_ty = hs_ty
 
 -- | For every type variable in the input,
@@ -601,7 +601,7 @@ synifyType _ vs (TyConApp tc tys)
       | tyConAppNeedsKindSig False tc tys_len
       = let full_kind  = typeKind (mkTyConApp tc tys)
             full_kind' = synifyType WithinType vs full_kind
-        in noLoc $ HsKindSig noExtField ty' full_kind'
+        in noLoc $ HsKindSig emptyNameSet ty' full_kind'
       | otherwise = ty'
 
 synifyType s vs (AppTy t1 (CoercionTy {})) = synifyType s vs t1

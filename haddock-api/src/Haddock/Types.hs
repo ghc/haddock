@@ -370,20 +370,15 @@ data PseudoFamilyDecl name = PseudoFamilyDecl
     }
 
 
-mkPseudoFamilyDecl :: FamilyDecl (GhcPass p) -> PseudoFamilyDecl (GhcPass p)
+mkPseudoFamilyDecl
+  :: XKindedTyVar (GhcPass p) ~ XKindSig (GhcPass p)
+  => FamilyDecl (GhcPass p) -> PseudoFamilyDecl (GhcPass p)
 mkPseudoFamilyDecl (FamilyDecl { .. }) = PseudoFamilyDecl
     { pfdInfo = fdInfo
     , pfdLName = fdLName
-    , pfdTyVars = [ L loc (mkType bndr) | L loc bndr <- hsq_explicit fdTyVars ]
+    , pfdTyVars = hsLTyVarBndrsToTypes fdTyVars
     , pfdKindSig = fdResultSig
     }
-  where
-    mkType (KindedTyVar _ (L loc name) lkind) =
-        HsKindSig noExtField tvar lkind
-      where
-        tvar = L loc (HsTyVar noExtField NotPromoted (L loc name))
-    mkType (UserTyVar _ name) = HsTyVar noExtField NotPromoted name
-    mkType (XTyVarBndr nec) = noExtCon nec
 mkPseudoFamilyDecl (XFamilyDecl nec) = noExtCon nec
 
 
