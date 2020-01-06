@@ -221,7 +221,7 @@ getGADTConType (XConDecl nec) = noExtCon nec
 
 -- -------------------------------------
 
-getGADTConTypeG :: ConDecl (GhcPass p) -> LHsType (GhcPass p)
+getGADTConTypeG :: ConDecl GhcRn -> LHsType GhcRn
 -- The full type of a GADT data constructor We really only get this in
 -- order to pretty-print it, and currently only in Haddock's code.  So
 -- we are cavalier about locations and extensions, hence the
