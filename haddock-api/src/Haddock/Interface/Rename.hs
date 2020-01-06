@@ -577,10 +577,10 @@ renameDerivD (DerivDecl { deriv_type = ty
 renameDerivD (XDerivDecl nec) = noExtCon nec
 
 renameDerivStrategy :: DerivStrategy GhcRn -> RnM (DerivStrategy DocNameI)
-renameDerivStrategy StockStrategy    = pure StockStrategy
-renameDerivStrategy AnyclassStrategy = pure AnyclassStrategy
-renameDerivStrategy NewtypeStrategy  = pure NewtypeStrategy
-renameDerivStrategy (ViaStrategy ty) = ViaStrategy <$> renameLSigType ty
+renameDerivStrategy StockStrategy    {} = pure (StockStrategy noExtField)
+renameDerivStrategy AnyclassStrategy {} = pure (AnyclassStrategy noExtField)
+renameDerivStrategy NewtypeStrategy  {} = pure (NewtypeStrategy noExtField)
+renameDerivStrategy (ViaStrategy ty)    = ViaStrategy <$> renameLSigType ty
 
 renameClsInstD :: ClsInstDecl GhcRn -> RnM (ClsInstDecl DocNameI)
 renameClsInstD (ClsInstDecl { cid_overlap_mode = omode
