@@ -151,7 +151,7 @@ rename :: Name -> RnM DocName
 rename = lookupRn
 
 
-renameL :: Located Name -> RnM (Located DocName)
+renameL :: LocatedA Name -> RnM (LocatedA DocName)
 renameL = mapM rename
 
 
@@ -412,7 +412,7 @@ renameTyClD d = case d of
     renameLFunDep (L loc (xs, ys)) = do
       xs' <- mapM rename (map unLoc xs)
       ys' <- mapM rename (map unLoc ys)
-      return (L loc (map noLoc xs', map noLoc ys'))
+      return (L loc (map noLocA xs', map noLocA ys'))
 
     renameLSig (L loc sig) = return . L loc =<< renameSig sig
 
@@ -577,10 +577,10 @@ renameDerivD (DerivDecl { deriv_type = ty
 renameDerivD (XDerivDecl nec) = noExtCon nec
 
 renameDerivStrategy :: DerivStrategy GhcRn -> RnM (DerivStrategy DocNameI)
-renameDerivStrategy StockStrategy    = pure StockStrategy
-renameDerivStrategy AnyclassStrategy = pure AnyclassStrategy
-renameDerivStrategy NewtypeStrategy  = pure NewtypeStrategy
-renameDerivStrategy (ViaStrategy ty) = ViaStrategy <$> renameLSigType ty
+renameDerivStrategy (StockStrategy a)    = pure (StockStrategy a)
+renameDerivStrategy (AnyclassStrategy a) = pure (AnyclassStrategy a)
+renameDerivStrategy (NewtypeStrategy a)  = pure (NewtypeStrategy a)
+renameDerivStrategy (ViaStrategy ty)     = ViaStrategy <$> renameLSigType ty
 
 renameClsInstD :: ClsInstDecl GhcRn -> RnM (ClsInstDecl DocNameI)
 renameClsInstD (ClsInstDecl { cid_overlap_mode = omode

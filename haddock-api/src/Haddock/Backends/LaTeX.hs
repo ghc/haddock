@@ -576,7 +576,7 @@ rDoc = maybeDoc . fmap latexStripTrailingWhitespace
 
 
 ppClassHdr :: Bool -> Located [LHsType DocNameI] -> DocName
-           -> LHsQTyVars DocNameI -> [Located ([Located DocName], [Located DocName])]
+           -> LHsQTyVars DocNameI -> [Located ([LocatedA DocName], [LocatedA DocName])]
            -> Bool -> LaTeX
 ppClassHdr summ lctxt n tvs fds unicode =
   keyword "class"
@@ -585,7 +585,7 @@ ppClassHdr summ lctxt n tvs fds unicode =
   <+> ppFds fds unicode
 
 
-ppFds :: [Located ([Located DocName], [Located DocName])] -> Bool -> LaTeX
+ppFds :: [Located ([LocatedA DocName], [LocatedA DocName])] -> Bool -> LaTeX
 ppFds fds unicode =
   if null fds then empty else
     char '|' <+> hsep (punctuate comma (map (fundep . unLoc) fds))
@@ -855,7 +855,7 @@ ppSideBySideField _ _ (XConDeclField nec) = noExtCon nec
 
 
 -- | Pretty-print a bundled pattern synonym
-ppSideBySidePat :: [Located DocName]    -- ^ pattern name(s)
+ppSideBySidePat :: [LocatedA DocName]   -- ^ pattern name(s)
                 -> LHsSigType DocNameI  -- ^ type of pattern(s)
                 -> DocForDecl DocName   -- ^ doc map
                 -> Bool                 -- ^ unicode
@@ -1136,7 +1136,7 @@ ppDocName :: DocName -> LaTeX
 ppDocName = ppOccName . nameOccName . getName
 
 
-ppLDocName :: Located DocName -> LaTeX
+ppLDocName :: LocatedA DocName -> LaTeX
 ppLDocName (L _ d) = ppDocName d
 
 

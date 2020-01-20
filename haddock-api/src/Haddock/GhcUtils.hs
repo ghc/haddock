@@ -73,7 +73,7 @@ getMainDeclBinder _ = []
 getInstLoc :: InstDecl (GhcPass p) -> SrcSpan
 getInstLoc (ClsInstD _ (ClsInstDecl { cid_poly_ty = ty })) = getLoc (hsSigType ty)
 getInstLoc (DataFamInstD _ (DataFamInstDecl
-  { dfid_eqn = HsIB { hsib_body = FamEqn { feqn_tycon = L l _ }}})) = l
+  { dfid_eqn = HsIB { hsib_body = FamEqn { feqn_tycon = L l _ }}})) = locA l
 getInstLoc (TyFamInstD _ (TyFamInstDecl
   -- Since CoAxioms' Names refer to the whole line for type family instances
   -- in particular, we need to dig a bit deeper to pull out the entire
@@ -176,7 +176,7 @@ hsTyVarNameI (XTyVarBndr nec) = noExtCon nec
 hsLTyVarNameI :: LHsTyVarBndr DocNameI -> DocName
 hsLTyVarNameI = hsTyVarNameI . unLoc
 
-getConNamesI :: ConDecl DocNameI -> [Located DocName]
+getConNamesI :: ConDecl DocNameI -> [LocatedA DocName]
 getConNamesI ConDeclH98  {con_name  = name}  = [name]
 getConNamesI ConDeclGADT {con_names = names} = names
 getConNamesI (XConDecl nec) = noExtCon nec
@@ -221,7 +221,7 @@ getGADTConType (XConDecl nec) = noExtCon nec
 
 -- -------------------------------------
 
-getGADTConTypeG :: ConDecl (GhcPass p) -> LHsType (GhcPass p)
+getGADTConTypeG :: ConDecl GhcRn -> LHsType GhcRn
 -- The full type of a GADT data constructor We really only get this in
 -- order to pretty-print it, and currently only in Haddock's code.  So
 -- we are cavalier about locations and extensions, hence the
@@ -353,11 +353,11 @@ reparenConDeclField c@XConDeclField{} = c
 -------------------------------------------------------------------------------
 
 
-unL :: Located a -> a
+unL :: GenLocated l a -> a
 unL (L _ x) = x
 
 
-reL :: a -> Located a
+reL :: a -> GenLocated l a
 reL = L undefined
 
 -------------------------------------------------------------------------------
@@ -367,6 +367,9 @@ reL = L undefined
 
 instance NamedThing (TyClDecl GhcRn) where
   getName = tcdName
+
+instance (NamedThing a) => NamedThing (LocatedA a) where
+  getName (L _ a) = getName a
 
 -------------------------------------------------------------------------------
 -- * Subordinates

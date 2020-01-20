@@ -116,9 +116,9 @@ tyThingToLHsDecl prr t = case t of
          , tcdTyVars = synifyTyVars vs
          , tcdFixity = synifyFixity cl
          , tcdFDs = map (\ (l,r) -> noLoc
-                        (map (noLoc . getName) l, map (noLoc . getName) r) ) $
+                        (map (noLocA . getName) l, map (noLocA . getName) r) ) $
                          snd $ classTvsFds cl
-         , tcdSigs = noLoc (MinimalSig noExtField NoSourceText . noLoc . fmap noLoc $ classMinimalDef cl) :
+         , tcdSigs = noLoc (MinimalSig noExtField NoSourceText . noLoc . fmap noLocA $ classMinimalDef cl) :
                       [ noLoc tcdSig
                       | clsOp <- classOpItems cl
                       , tcdSig <- synifyTcIdSig vs clsOp ]
@@ -210,8 +210,8 @@ synifyTyCon prr _coax tc
   where
     -- tyConTyVars doesn't work on fun/prim, but we can make them up:
     mk_hs_tv realKind fakeTyVar
-      | isLiftedTypeKind realKind = noLoc $ UserTyVar noExtField (noLoc (getName fakeTyVar))
-      | otherwise = noLoc $ KindedTyVar noExtField (noLoc (getName fakeTyVar)) (synifyKindSig realKind)
+      | isLiftedTypeKind realKind = noLoc $ UserTyVar noExtField (noLocA (getName fakeTyVar))
+      | otherwise = noLoc $ KindedTyVar noExtField (noLocA (getName fakeTyVar)) (synifyKindSig realKind)
 
     conKind = defaultType prr (tyConKind tc)
     tyVarKinds = fst . splitFunTys . snd . splitPiTysInvisible $ conKind
@@ -327,15 +327,15 @@ synifyInjectivityAnn :: Maybe Name -> [TyVar] -> Injectivity
 synifyInjectivityAnn Nothing _ _            = Nothing
 synifyInjectivityAnn _       _ NotInjective = Nothing
 synifyInjectivityAnn (Just lhs) tvs (Injective inj) =
-    let rhs = map (noLoc . tyVarName) (filterByList inj tvs)
-    in Just $ noLoc $ InjectivityAnn (noLoc lhs) rhs
+    let rhs = map (noLocA . tyVarName) (filterByList inj tvs)
+    in Just $ noLoc $ InjectivityAnn (noLocA lhs) rhs
 
 synifyFamilyResultSig :: Maybe Name -> Kind -> LFamilyResultSig GhcRn
 synifyFamilyResultSig  Nothing    kind
    | isLiftedTypeKind kind = noLoc $ NoSig noExtField
    | otherwise = noLoc $ KindSig  noExtField (synifyKindSig kind)
 synifyFamilyResultSig (Just name) kind =
-   noLoc $ TyVarSig noExtField (noLoc $ KindedTyVar noExtField (noLoc name) (synifyKindSig kind))
+   noLoc $ TyVarSig noExtField (noLoc $ KindedTyVar noExtField (noLocA name) (synifyKindSig kind))
 
 -- User beware: it is your responsibility to pass True (use_gadt_syntax)
 -- for any constructor that would be misrepresented by omitting its
@@ -368,7 +368,7 @@ synifyDataCon use_gadt_syntax dc =
 
   field_tys = zipWith con_decl_field (dataConFieldLabels dc) linear_tys
   con_decl_field fl synTy = noLoc $
-    ConDeclField noExtField [noLoc $ FieldOcc (flSelector fl) (noLoc $ mkVarUnqual $ flLabel fl)] synTy
+    ConDeclField noExtField [noLoc $ FieldOcc (flSelector fl) (noLocA $ mkVarUnqual $ flLabel fl)] synTy
                  Nothing
   hs_arg_tys = case (use_named_field_syntax, use_infix_syntax) of
           (True,True) -> Left "synifyDataCon: contradiction!"
@@ -399,8 +399,8 @@ synifyDataCon use_gadt_syntax dc =
                          , con_args   = hat
                          , con_doc    = Nothing }
 
-synifyName :: NamedThing n => n -> Located Name
-synifyName n = L (srcLocSpan (getSrcLoc n)) (getName n)
+synifyName :: NamedThing n => n -> LocatedA Name
+synifyName n = L (noAnnSrcSpan $ srcLocSpan (getSrcLoc n)) (getName n)
 
 -- | Guess the fixity of a something with a name. This isn't quite right, since
 -- a user can always declare an infix name in prefix form or a prefix name in
@@ -425,7 +425,7 @@ synifyIdSig prr s vs i = TypeSig noExtField [synifyName i] (synifySigWcType s vs
 synifyTcIdSig :: [TyVar] -> ClassOpItem -> [Sig GhcRn]
 synifyTcIdSig vs (i, dm) =
   [ ClassOpSig noExtField False [synifyName i] (mainSig (varType i)) ] ++
-  [ ClassOpSig noExtField True [noLoc dn] (defSig dt)
+  [ ClassOpSig noExtField True [noLocA dn] (defSig dt)
   | Just (dn, GenericDM dt) <- [dm] ]
   where
     mainSig t = synifySigType DeleteTopLevelQuantification vs t
@@ -447,8 +447,8 @@ synifyTyVar = synifyTyVar' emptyVarSet
 synifyTyVar' :: VarSet -> TyVar -> LHsTyVarBndr GhcRn
 synifyTyVar' no_kinds tv
   | isLiftedTypeKind kind || tv `elemVarSet` no_kinds
-  = noLoc (UserTyVar noExtField (noLoc name))
-  | otherwise = noLoc (KindedTyVar noExtField (noLoc name) (synifyKindSig kind))
+  = noLoc (UserTyVar noExtField (noLocA name))
+  | otherwise = noLoc (KindedTyVar noExtField (noLocA name) (synifyKindSig kind))
   where
     kind = tyVarKind tv
     name = getName tv
@@ -523,7 +523,7 @@ synifyType
   -> [TyVar]          -- ^ free variables in the type to convert
   -> Type             -- ^ the type to convert
   -> LHsType GhcRn
-synifyType _ _ (TyVarTy tv) = noLoc $ HsTyVar noExtField NotPromoted $ noLoc (getName tv)
+synifyType _ _ (TyVarTy tv) = noLoc $ HsTyVar noExtField NotPromoted $ noLocA (getName tv)
 synifyType _ vs (TyConApp tc tys)
   = maybe_sig res_ty
   where
@@ -533,7 +533,7 @@ synifyType _ vs (TyConApp tc tys)
       | tc `hasKey` tYPETyConKey
       , [TyConApp lev []] <- tys
       , lev `hasKey` liftedRepDataConKey
-      = noLoc (HsTyVar noExtField NotPromoted (noLoc liftedTypeKindTyConName))
+      = noLoc (HsTyVar noExtField NotPromoted (noLocA liftedTypeKindTyConName))
       -- Use non-prefix tuple syntax where possible, because it looks nicer.
       | Just sort <- tyConTuple_maybe tc
       , tyConArity tc == tys_len
@@ -560,7 +560,7 @@ synifyType _ vs (TyConApp tc tys)
              tTy | L _ (HsExplicitListTy _ IsPromoted tTy') <- stripKindSig tTy
                  -> noLoc $ HsExplicitListTy noExtField IsPromoted (hTy : tTy')
                  | otherwise
-                 -> noLoc $ HsOpTy noExtField hTy (noLoc $ getName tc) tTy
+                 -> noLoc $ HsOpTy noExtField hTy (noLocA $ getName tc) tTy
       -- ditto for implicit parameter tycons
       | tc `hasKey` ipClassKey
       , [name, ty] <- tys
@@ -571,19 +571,19 @@ synifyType _ vs (TyConApp tc tys)
       , [ty1, ty2] <- tys
       = noLoc $ HsOpTy noExtField
                        (synifyType WithinType vs ty1)
-                       (noLoc eqTyConName)
+                       (noLocA eqTyConName)
                        (synifyType WithinType vs ty2)
       -- and infix type operators
       | isSymOcc (nameOccName (getName tc))
       , ty1:ty2:tys_rest <- vis_tys
       = mk_app_tys (HsOpTy noExtField
                            (synifyType WithinType vs ty1)
-                           (noLoc $ getName tc)
+                           (noLocA $ getName tc)
                            (synifyType WithinType vs ty2))
                    tys_rest
       -- Most TyCons:
       | otherwise
-      = mk_app_tys (HsTyVar noExtField prom $ noLoc (getName tc))
+      = mk_app_tys (HsTyVar noExtField prom $ noLocA (getName tc))
                    vis_tys
       where
         prom = if isPromotedDataCon tc then IsPromoted else NotPromoted

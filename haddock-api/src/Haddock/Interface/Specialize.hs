@@ -345,8 +345,9 @@ alternativeNames name =
     str = nameRepString name
 
 
-located :: Functor f => (a -> f b) -> Located a -> f (Located b)
+located :: Functor f => (a -> f b) -> GenLocated l a -> f (GenLocated l b)
 located f (L loc e) = L loc <$> f e
+
 
 
 tyVarName :: HsTyVarBndr name -> IdP name

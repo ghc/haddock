@@ -54,7 +54,7 @@ ppUncheckedLink _ (mdl, occ) = linkIdOcc' mdl (Just occ) << ppOccName occ -- TOD
 
 
 -- The Bool indicates if it is to be rendered in infix notation
-ppLDocName :: Qualification -> Notation -> Located DocName -> Html
+ppLDocName :: Qualification -> Notation -> LocatedA DocName -> Html
 ppLDocName qual notation (L _ d) = ppDocName qual notation True d
 
 ppDocName :: Qualification -> Notation -> Bool -> DocName -> Html

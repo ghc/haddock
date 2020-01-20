@@ -364,7 +364,7 @@ instance (OutputableBndrId p)
 -- 'PseudoFamilyDecl' type is introduced.
 data PseudoFamilyDecl name = PseudoFamilyDecl
     { pfdInfo :: FamilyInfo name
-    , pfdLName :: Located (IdP name)
+    , pfdLName :: LocatedA (IdP name)
     , pfdTyVars :: [LHsType name]
     , pfdKindSig :: LFamilyResultSig name
     }
@@ -381,7 +381,7 @@ mkPseudoFamilyDecl (FamilyDecl { .. }) = PseudoFamilyDecl
     mkType (KindedTyVar _ (L loc name) lkind) =
         HsKindSig noExtField tvar lkind
       where
-        tvar = L loc (HsTyVar noExtField NotPromoted (L loc name))
+        tvar = L (locA loc) (HsTyVar noExtField NotPromoted (L loc name))
     mkType (UserTyVar _ name) = HsTyVar noExtField NotPromoted name
     mkType (XTyVarBndr nec) = noExtCon nec
 mkPseudoFamilyDecl (XFamilyDecl nec) = noExtCon nec
@@ -730,6 +730,9 @@ type instance XXFamEqn       DocNameI _ = NoExtCon
 
 type instance XCClsInstDecl DocNameI = NoExtField
 type instance XCDerivDecl   DocNameI = NoExtField
+type instance XStockStrategy    DocNameI = NoExtField
+type instance XAnyClassStrategy DocNameI = NoExtField
+type instance XNewtypeStrategy  DocNameI = NoExtField
 type instance XViaStrategy  DocNameI = LHsSigType DocNameI
 type instance XDataFamInstD DocNameI = NoExtField
 type instance XTyFamInstD   DocNameI = NoExtField
