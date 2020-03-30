@@ -223,7 +223,7 @@ module documentation example and then talk about the fields. ::
     {-|
     Module      : W
     Description : Short description
-    Copyright   : (c) Some Guy, 2013
+    Copyright   : (c) Some Dev, 2013
                       Someone Else, 2014
     License     : GPL-3
     Maintainer  : sample@email.com
@@ -245,7 +245,7 @@ multiline ``Copyright`` field: ::
 
     {-|
     ...
-    Copyright   : (c) Some Guy, 2013
+    Copyright   : (c) Some Dev, 2013
                       Someone Else, 2014
     ...
     -}
@@ -254,21 +254,21 @@ That could equivalently be written as: ::
 
     -- | ...
     -- Copyright:
-    --  (c) Some Guy, 2013
+    --  (c) Some Dev, 2013
     --  Someone Else, 2014
     -- ...
 
 or as: ::
 
     -- | ...
-    -- Copyright: (c) Some Guy, 2013
+    -- Copyright: (c) Some Dev, 2013
     --     Someone Else, 2014
     -- ...
 
 but not as: ::
 
     -- | ...
-    -- Copyright: (c) Some Guy, 2013
+    -- Copyright: (c) Some Dev, 2013
     -- Someone Else, 2014
     -- ...
 
