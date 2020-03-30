@@ -31,10 +31,11 @@ import Control.Arrow ( first )
 import Control.Monad hiding (mapM)
 import Data.List
 import qualified Data.Map as Map hiding ( Map )
+import qualified Data.Set as Set
 import Prelude hiding (mapM)
 
-renameInterface :: DynFlags -> LinkEnv -> Bool -> Interface -> ErrMsgM Interface
-renameInterface dflags renamingEnv warnings iface =
+renameInterface :: DynFlags -> [String] -> LinkEnv -> Bool -> Interface -> ErrMsgM Interface
+renameInterface _dflags ignoredSymbols renamingEnv warnings iface =
 
   -- first create the local env, where every name exported by this module
   -- is mapped to itself, and everything else comes from the global renaming
@@ -69,8 +70,15 @@ renameInterface dflags renamingEnv warnings iface =
       -- Note that since the renamed AST represents equality constraints as
       -- @HasOpTy t1 eqTyCon_RDR t2@ (and _not_ as @HsEqTy t1 t2@), we need to
       -- manually filter out 'eqTyCon_RDR' (aka @~@).
-      strings = [ pretty dflags n
+
+      qualifiedName n = (moduleNameString $ moduleName $ nameModule n) <> "." <> getOccString n
+
+      ignoreSet = Set.fromList ignoredSymbols
+
+      strings = [ qualifiedName n
+
                 | n <- missingNames
+                , not (qualifiedName n `Set.member` ignoreSet)
                 , not (isSystemName n)
                 , not (isBuiltInSyntax n)
                 , Exact n /= eqTyCon_RDR
@@ -82,7 +90,7 @@ renameInterface dflags renamingEnv warnings iface =
     unless (OptHide `elem` ifaceOptions iface || null strings || not warnings) $
       tell ["Warning: " ++ moduleString (ifaceMod iface) ++
             ": could not find link destinations for:\n"++
-            unwords ("   " : strings) ]
+            intercalate "\n\t- "  ("" : strings) ]
 
     return $ iface { ifaceRnDoc         = finalModuleDoc,
                      ifaceRnDocMap      = rnDocMap,
